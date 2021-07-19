@@ -135,7 +135,7 @@ class Pulse:
             # phi0: add phase offset to phase
             self.ph = self.ph + self.phi0 # calls __setattr__ recursively
 
-    def __add__(self, pulse2add):
+    def __radd__(self, pulse2add):
         """Addition operation defined as sum of Cartesian coordinates
         
         Parameters
