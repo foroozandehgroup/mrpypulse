@@ -185,6 +185,26 @@ class Pulse:
 
         return pulse_sum
 
+    def __eq__(self, p):
+        """
+        
+        Parameters
+        ----------
+            - p, pulse to compare
+
+        2 pulses are considered equal if they have the same coordinates, 
+        time resolution and number of points.
+        They can take different position and have different additional attributes
+        """
+        # TODO testing
+        if np.allclose(self.x, p.x, rtol=1e-6, atol=1e-15) and \
+            np.allclose(self.y, p.y, rtol=1e-6, atol=1e-15) and \
+            np.close(self.tres, p.tres, rtol=1e-6, atol=1e-15) and \
+            self.ns==p.ns:
+            return True
+        else:
+            return False
+
     def plot(self, name=""):
         """Plot the shape of the pulse in cartesian coordinates
 
@@ -330,7 +350,6 @@ class Parametrized(Shape):
             self.Q = Q
             self.w1 = w1
             
-
         Shape.__init__(self, AM=AM, FM=FM, bw=bw, tp=tp, **kwargs)
 
         # frequency offset
