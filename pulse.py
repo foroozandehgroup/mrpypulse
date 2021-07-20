@@ -3,6 +3,7 @@
 import numpy as np
 import scipy.interpolate
 import matplotlib.pyplot as plt
+import copy
 try:
     import matlab.engine
 except:
@@ -57,18 +58,18 @@ class Pulse:
         if x is None and y is None and r is None and ph is None:
             # no coordinates (empty pulse)
             pass
-        elif x is None and y is None:
+        elif x is None and y is None and r is not None and ph is not None:
             self.r = r
             self.ph = ph
             if len(r) != len(ph):
                 raise ValueError('r and ph should have the same length')
-        elif r is None and ph is None:
+        elif x is not None and y is not None and r is None and ph is None:
             self.x = x
             self.y = y
             if len(x) != len(y):
                 raise ValueError('x and y should have the same length')
         else:
-            raise ValueError('x should be input with y or r with ph.')
+            raise TypeError('Coordinates should be input as either x and y or r and ph.')
 
         if tres is None and tp is not None and ns is not None:
             self.tp = tp
@@ -83,12 +84,11 @@ class Pulse:
             self.ns = int(np.floor(tp / tres))
             self.tres = tp / self.ns # tres adjusted for the rouding on n
         else:
-            raise ValueError('Exactly 2 of tp, np and tres should be input.')
-
+            raise TypeError('Exactly 2 of tp, np and tres should be used.')
         self.phi0 = phi0
 
         if hasattr(self, 'r'):
-            if len(self.r) != ns:
+            if len(self.r) != self.ns:
                 raise ValueError('Pulse coordinates length and ns do no match.')
             self.w1 = np.max(self.r)
 
@@ -118,14 +118,14 @@ class Pulse:
 
         # set attribute value
         object.__setattr__(self, name, value)
-        
+
         if (name == 'ph' or name == 'r') and hasattr(self, 'r') and hasattr(self, 'ph'):
             # r or ph: x, y, w1 update
             object.__setattr__(self, 'x', self.r * np.cos(self.ph))
             object.__setattr__(self, 'y', self.r * np.sin(self.ph))
             if hasattr(self, 'w1'):
                 object.__setattr__(self, 'w1', np.max(self.r))
-        elif (name == 'x' and name == 'y') and hasattr(self, 'x') and hasattr(self, 'y'):
+        elif (name == 'x' or name == 'y') and hasattr(self, 'x') and hasattr(self, 'y'):
             # x or y: r, ph, w1 update
             object.__setattr__(self, 'r', np.sqrt(self.x**2 + self.y**2))
             object.__setattr__(self, 'ph', np.arctan2(self.y, self.x))
@@ -187,7 +187,6 @@ class Pulse:
 
     def __eq__(self, p):
         """
-        
         Parameters
         ----------
             - p, pulse to compare
@@ -199,11 +198,22 @@ class Pulse:
         # TODO testing
         if np.allclose(self.x, p.x, rtol=1e-6, atol=1e-15) and \
             np.allclose(self.y, p.y, rtol=1e-6, atol=1e-15) and \
-            np.close(self.tres, p.tres, rtol=1e-6, atol=1e-15) and \
+            np.isclose(self.tres, p.tres, rtol=1e-6, atol=1e-15) and \
             self.ns==p.ns:
             return True
         else:
             return False
+
+    def __ne__(self, p):
+        """
+        cf. __eq__
+        """
+        return not self.__eq__(p)
+
+    def __str__(self):
+        """
+        """
+        # TODO define method
 
     def plot(self, name=""):
         """Plot the shape of the pulse in cartesian coordinates
@@ -346,7 +356,7 @@ class Parametrized(Shape):
             elif Q is None  and bw is not None and tp is not None and w1 is not None:
                 Q = w1**2 * 2 * np.pi * tp / bw
             else:
-                raise ValueError('Exactly 3 of Q, w1, tp and bw should be input.')
+                raise TypeError('Exactly 3 of Q, w1, tp and bw should be input.')
             self.Q = Q
             self.w1 = w1
             
