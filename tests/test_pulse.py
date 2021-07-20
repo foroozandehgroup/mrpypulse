@@ -21,10 +21,10 @@ def test_pulse_init():
     p3 = pulse.Pulse(x=x, y=y, ns=ns, tp=tp)
     assert p1==p2==p3
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         p4=pulse.Pulse(x=x, y=y, tres=tres, ns=ns, tp=tp)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         p4=pulse.Pulse(x=x, y=y, tres=tres)
 
     # assert x/y and r/ph produce same output
@@ -33,10 +33,10 @@ def test_pulse_init():
     p4 = pulse.Pulse(r=r, ph=ph, ns=ns, tres=tres)
     assert p1==p4
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         p5=pulse.Pulse(x=x, y=y, r=r, ns=ns, tres=tres)
     
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         p5=pulse.Pulse(x=x, ns=ns, tres=tres)
     
 
