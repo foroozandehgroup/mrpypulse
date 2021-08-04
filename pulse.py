@@ -211,23 +211,60 @@ class Pulse:
         return not self.__eq__(p)
 
     def __str__(self):
+        """Convert pulse object to string (typically used by print)
         """
-        """
-        # TODO define method
+        return (
+            'Pulse object with the following attributes\n'
+            f'tp:    {self.tp}\n'
+            f'ns:    {self.ns}\n'
+            f'tres:  {self.tres}\n'
+            f'start: {self.start}\n'
+            f'end:   {self.end}\n'
+            f'w1:    {self.w1}\n'
+            f'phi0:  {self.phi0}\n'
+            f'x:     [{self.x[0]} ... {self.x[-1]}]\n'
+            f'y:     [{self.y[0]} ... {self.y[-1]}]\n'
+            f'r:     [{self.r[0]} ... {self.r[-1]}]\n'
+            f'ph:    [{self.ph[0]} ... {self.ph[-1]}]\n'
+        )
 
-    def plot(self, title:str = None):
+    def plot(self, form:str = "Cartesian", label:bool = True, title:str = None):
         """Plot the pulse shape in Cartesian coordinates
         
         Parameters
         ----------
-        name: string
+        type: string
+            type of plot
+        title: string
             plot title
 
         Might require figure() before call and show() after.
         """
-        plt.plot(self.t, self.x)
-        plt.plot(self.t, self.y, 'r')
-        plt.ylim(-self.w1, self.w1)
+        if label == True:
+            plt.xlabel('Time (s)') # before potential call to twinx()
+        
+        if form == "Cartesian":
+            plt.plot(self.t, self.x)
+            plt.plot(self.t, self.y, 'r')
+            
+            plt.ylim(-self.w1, self.w1)
+            if label == True:
+                plt.ylabel('Cartesian coordinates (Hz)')
+            
+            
+        elif form == "polar":
+            plt.plot(self.t, self.r)
+            plt.ylabel('Amplitude (Hz)',color='C0')
+            plt.ylim(-self.w1, self.w1)
+            
+            ax = plt.gca()
+            ax.twinx()
+            plt.plot(self.t, self.ph, 'r')
+            if label == True:
+                plt.ylabel('Phase (rad)',color='r')
+        else:
+            raise ValueError('form should be one of the following: Cartesian, polar')
+
         plt.xlim(self.start, right=self.end)
         plt.title(title)
 
