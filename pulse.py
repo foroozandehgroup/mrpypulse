@@ -215,19 +215,21 @@ class Pulse:
         """
         # TODO define method
 
-    def plot(self, name=""):
-        """Plot the shape of the pulse in cartesian coordinates
+    def plot(self, title:str = None):
+        """Plot the pulse shape in Cartesian coordinates
+        
+        Parameters
+        ----------
+        name: string
+            plot title
 
-        The figures needs to be revealed with plt.show() after the 
-        function execution.
-
+        Might require figure() before call and show() after.
         """
-        plt.figure()
         plt.plot(self.t, self.x)
         plt.plot(self.t, self.y, 'r')
         plt.ylim(-self.w1, self.w1)
         plt.xlim(self.start, right=self.end)
-        plt.title(name)
+        plt.title(title)
 
     def pulse2Xepr(self):
         """Export the pulse to Xepr format"""

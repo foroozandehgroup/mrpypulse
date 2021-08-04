@@ -18,9 +18,8 @@ tp = ns * tres
 p4 = pulse.Pulse(x=x, y=y, tp=tp, tres=tres)
 p5 = pulse.Pulse(x=x, y=y, ns=ns, tp=tp)
 
-a = [1, 2, 3]
-b = a.copy()
-a.append(4)
-
-print(a)
-print(b)
+plt.figure()
+plt.subplot(1,2,1)
+p4.plot()
+plt.subplot(1,2,2)
+p5.plot()
