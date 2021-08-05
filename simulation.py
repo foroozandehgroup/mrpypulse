@@ -20,7 +20,6 @@ def simulate(pulses, off, time=None, B1=None, use_pc=False, magn_init=None):
         offsets
     time: float
         time of the simulation
-
     """
     if time is None:
         time = np.max(p.end for p in pulses)
@@ -67,8 +66,9 @@ def magnetisations(pulses, delta_F, nspins):
         ndarray containing the phase across the spectral width
     offsets: ndarray
         ndarray containing offsets for which the values are calculated
+        
+    TODO use Rodrigues matrix for simulation
     """
-    
     # Phase cycling
     # TODO: should be input by the user if he wants to use phase cyclign
     ph1 = [0]
@@ -184,10 +184,10 @@ def excitation_profile(pulses, delta_F, nspins):
     """
     Calculates and plot the excitaton profile of the pulse.
     
-    
-    
     To prevent confusion of inputs and best results this should be called straight after the optimised pulse has been created,
     and from within the same script.
+    TODO: change name? (some ppl use inversion/refocusing profiles...), we 
+    could just rename to simulate()
     
     Parameters
     ----------
@@ -231,7 +231,7 @@ def excitation_profile(pulses, delta_F, nspins):
     plt.xlabel("Offset / kHz")
     plt.tight_layout()
 
-    # TODO: move this somewhere else (not an excitation profile)
+    # TODO: move the follwing somewhere else (not an excitation profile)
     # Plot phase variation with B1
     # phase variation plotted vs offset
     # plt.figure('B1 phase variation')

@@ -1,21 +1,21 @@
 """ This module contains the class Sequence."""
 
+import pulse
+
 class Sequence:
     
-    "Class representing a pulse sequence"
+    """Class representing a pulse sequence
+    Parameters
+    ----------
+    pulses: list of pulse objects
+        the pulses of the sequence
+    total_time: float
+        Total duration of the sequence (s)
+    pc: numpy array of floats
+        phase cycling tables of the sequence
+    """
 
     def __init__(self, pulses, total_time: float = None, pc=None):
-        """
-        Parameters
-        ----------
-        pulses: list of pulse objects
-            the pulses of the sequence
-        total_time: float
-            Total duration of the sequence (s)
-        pc: numpy array of floats
-            phase cycling tables of the sequence
-        """
-        
         self.pulses = pulses
 
         if total_time is None:
@@ -39,52 +39,57 @@ class Sequence:
 
     def __add__(self, sequence2add):
         """
+        TODO code method
         """
-        # TODO code method
         # check overlap?
         # pulses = [self.pulses, sequence2add.pulses]
         # sequence_sum = sequence(pulses, total_time=total_time)
         # return sequence_sum
 
-    def insert_pulse(self, pulse, position):
+    def insert(self, elem, position):
         """
         Parameters
         ----------
-        pulse: pulse object
-            pulse to insert in the sequence
+        elem: pulse object or float
+            element to insert in the sequence (pulse or delay)
         position: int
-            where the pulse should be inserted in the pulse list"""
-
-        # TODO code method
-        # insert pulse in pulse list
-        # update total time and pulse positions
-
-    def insert_delay(self, delay, position):
+            where the pulse/dealy should be inserted in the pulse list
+        TODO code method
         """
-        Parameters
-        ----------
-        delay: float
-            delay to insert in the sequence
-        position: int
-            where the pulse should be inserted in the pulse list"""
+        if isinstance(elem, pulse.Pulse):
+            # insert pulse in pulse list
+            # update total time and pulse positions
+            pass
+        if isinstance(elem, float): # delay case
+            # update total time and pulse positions
+            pass
 
-        # TODO code method
-        # update total time and pulse positions
+    def plot():
+        """
+        Plots the sequences pulses
+        TODO code the method
+        """
+        # add all the pulse and plot the resulting total pulse?
+        # limit: forced superposition but can be plotted by just ploting a 
+        # list of pulses on the same graph?
 
     def pc_receiver(self):
-        """Computes receiver phase with the phase cycling pc
         """
-        # TODO code method/insert it somewhere else
+        Computes receiver phase with the phase cycling pc
+        TODO code method/insert it somewhere else
+        """
 
     def seq2TopSpin(self):
-        """Export sequence pulse shapes to TopSpin waveforms
-        
         """
-        # TODO code method
+        Export sequence pulse shapes to TopSpin waveforms
+        TODO code method
+        """
 
     def seq2Xepr(self):
-        """Export sequence pulse shapes to Xepr waveforms"""
-        # TODO code method
+        """
+        Export sequence pulse shapes to Xepr waveforms
+        TODO code method
+        """
         # export each pulse with phase cycling options
         # plot each pulse and export its figure
 

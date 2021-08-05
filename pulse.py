@@ -4,59 +4,56 @@ import numpy as np
 import scipy.interpolate
 import matplotlib.pyplot as plt
 import copy
-try:
-    import matlab.engine
-except:
-    pass
 
 
 class Pulse:
 
-    """Class representing a pulse"""
+    """
+    Class representing a pulse
+    
+    All attributes not input are generated.
+
+    Required Parameters
+    -------------------
+        2 of tp, np and tres
+        either x and y or r and ph
+
+    Parameters
+    ----------
+    tp: float
+        duration (s)
+    ns: int
+        number of points/segments
+    tres: float
+        time resolution/sampling interval/segment duration
+        (s/sample)
+    x: numpy array of float
+        first cartesian coordinates(Hz)
+    y: numpy array of float
+        second cartesian coordinates (Hz)
+    r: numpy array of float
+        amplitude polar coordinate (Hz)
+    ph: numpy array of float
+        phase polar coordinate (rad)
+    phi0: float
+        phase offset (rad)
+    w1: float
+        pulse maximum amplitude (Hz)
+    t: numpy array of float
+        an array containing the times of the pulse point (in s)
+    start: float
+        start of the pulse (s)
+    end: float
+        end of the pulse
+    ID: string
+        Identification pulse
+    TODO discuss addition of flip angle +others?
+    """
 
     def __init__(self, tp:float = None, ns:int = None, tres:float = None, 
                  x=None, y=None, 
                  r=None, ph=None, 
                  phi0:float = 0, start:float = 0, ID:str = None):
-        """
-        All attributes not input are generated.
-
-        Required Parameters
-        -------------------
-            2 of tp, np and tres
-            either x and y or r and ph
-
-        Parameters
-        ----------
-        tp: float
-            duration (s)
-        ns: int
-            number of points/segments
-        tres: float
-            time resolution/sampling interval/segment duration
-            (s/sample)
-        x: numpy array of float
-            first cartesian coordinates(Hz)
-        y: numpy array of float
-            second cartesian coordinates (Hz)
-        r: numpy array of float
-            amplitude polar coordinate (Hz)
-        ph: numpy array of float
-            phase polar coordinate (rad)
-        phi0: float
-            phase offset (rad)
-        w1: float
-            pulse maximum amplitude (Hz)
-        t: numpy array of float
-            an array containing the times of the pulse point (in s)
-        start: float
-            start of the pulse (s)
-        end: float
-            end of the pulse
-        ID: string
-            Identification pulse
-        TODO discuss addition of flip angle +others?
-        """
         if ID is not None:
             self.ID = ID
         if x is None and y is None and r is None and ph is None:
@@ -164,6 +161,7 @@ class Pulse:
         is lost.
         """
         # TODO testing
+        # TODO __rsub__
         if self.tres != pulse2add.tres:
             raise ValueError('Pulses can only be added if their tres is the same.')
 
@@ -224,20 +222,25 @@ class Pulse:
         """
         Convert pulse object to string (typically used by print)
         """
-        return (
-            'Pulse object with the following attributes\n'
-            f'tp:    {self.tp}\n'
-            f'ns:    {self.ns}\n'
-            f'tres:  {self.tres}\n'
-            f'start: {self.start}\n'
-            f'end:   {self.end}\n'
-            f'w1:    {self.w1}\n'
-            f'phi0:  {self.phi0}\n'
-            f'x:     [{self.x[0]} ... {self.x[-1]}]\n'
-            f'y:     [{self.y[0]} ... {self.y[-1]}]\n'
-            f'r:     [{self.r[0]} ... {self.r[-1]}]\n'
-            f'ph:    [{self.ph[0]} ... {self.ph[-1]}]\n'
-        )
+        
+        Pulsestr = 'Pulse object with the following attributes\n'
+        
+        if hasattr(self, 'ID'):
+            Pulsestr += f'ID:    {self.ID}\n'
+            
+        Pulsestr += (f'tp:    {self.tp}\n'
+                     f'ns:    {self.ns}\n'
+                     f'tres:  {self.tres}\n'
+                     f'start: {self.start}\n'
+                     f'end:   {self.end}\n'
+                     f'w1:    {self.w1}\n'
+                     f'phi0:  {self.phi0}\n'
+                     f'x:     [{self.x[0]} ... {self.x[-1]}]\n'
+                     f'y:     [{self.y[0]} ... {self.y[-1]}]\n'
+                     f'r:     [{self.r[0]} ... {self.r[-1]}]\n'
+                     f'ph:    [{self.ph[0]} ... {self.ph[-1]}]\n')
+            
+        return Pulsestr
 
     def plot(self, form:str = "Cartesian", label:bool = True, title:str = None):
         """
@@ -262,7 +265,6 @@ class Pulse:
             plt.ylim(-self.w1, self.w1)
             if label == True:
                 plt.ylabel('Cartesian coordinates (Hz)')
-            
             
         elif form == "polar":
             plt.plot(self.t, self.r)
@@ -312,7 +314,6 @@ class Pulse:
         ph_TopSpin = np.rad2deg(self.ph)
         
         return r_TopSpin, ph_TopSpin
-        
 
     def pulse2Xepr_file(self):
         """
@@ -353,6 +354,13 @@ class Pulse:
         pulse shape to account for the resonator.
         The pulse amplitude amp and phase ph are modified.
         """
+        
+
+        try:
+            import matlab.engine
+        except:
+            pass
+        
         # TODO test this method
         t = self.t * 1e6
         y_t = self.x + self.y * 1j
@@ -388,9 +396,23 @@ class Pulse:
 
 class Hard(Pulse):
 
-    "Class representing a hard pulse."
+    """Class representing a hard pulse."""
 
     def __init__(self, tp, w1, **kwargs):
+        """
+        Parameters
+        ----------
+        tp : float
+            cf. Pulse
+        w1 : float
+            cf. Pulse
+        **kwargs
+            other arguments to be transmitted to parent classes
+
+        A hard pulse is defined as a 2 points pulse
+
+        # TO DO: require testing
+        """
         Pulse.__init__(self, tp=tp, ns=2, tres=tp/2, 
                        r=np.array([w1, w1]), ph=np.array([0, 0]), 
                        phi0=0, start=0)
@@ -398,7 +420,7 @@ class Hard(Pulse):
 
 class Shape(Pulse):
 
-    "Class representing a shaped pulse."
+    """Class representing a shaped pulse."""
 
     def __init__(self, AM=None, FM=None, bw=None, sm=None, n=None, **kwargs):
        
@@ -424,14 +446,39 @@ class Shape(Pulse):
 
 class Parametrized(Shape):
 
-    """Class representing a parametrized AM/FM pulse"""
+    """
+    Class representing a parametrized AM/FM pulse
+    
+    Parameters
+    ----------
+    AM: string
+        amplitude modulation
+    FM: string
+        frequency modulation
+    tp: float
+        cf. Pulse
+    bw: float
+        cf. Shape
+    w1: float
+        cf. Pulse
+    Q: float
+        adiabaticity factor of the pulse
+    delta_f: float
+        frequency offset (by default 0, correspond to a centred FM)
+    n: float
+        smoothing index for WURST or superGaussian AM
+    sm: float
+        smoothing percentage for sinsmoothed AM
+    B: float
+        smoothing index for HS pulses      
+    **kwargs
+        other argurments to transmit to parent classes
+    """
 
     def __init__(self, AM:str = "sinsmoothed", FM: str = "chirp", 
                  tp:float = None, bw:float = None, w1:float = None, 
                  Q:float = None, delta_f:float =0, 
                  n:int = None, sm:float = None, B:float = None, **kwargs):
-        """
-        """
 
         if FM is not None:
             if w1 is None and bw is not None and tp is not None and Q is not None:
