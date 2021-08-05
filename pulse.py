@@ -57,6 +57,8 @@ class Pulse:
             Identification pulse
         TODO discuss addition of flip angle +others?
         """
+        if ID is not None:
+            self.ID = ID
         if x is None and y is None and r is None and ph is None:
             # no coordinates (empty pulse)
             pass
@@ -143,7 +145,8 @@ class Pulse:
             self.ph = self.ph + self.phi0 # calls __setattr__ recursively
 
     def __radd__(self, pulse2add):
-        """Addition operation defined as sum of Cartesian coordinates
+        """
+        Pulse addition operation defined as sum of Cartesian coordinates
         
         Parameters
         ----------
@@ -213,12 +216,13 @@ class Pulse:
 
     def __ne__(self, p):
         """
-        cf. __eq__
+        negation of __eq__ (cf __eq__ for more information)
         """
         return not self.__eq__(p)
 
     def __str__(self):
-        """Convert pulse object to string (typically used by print)
+        """
+        Convert pulse object to string (typically used by print)
         """
         return (
             'Pulse object with the following attributes\n'
@@ -236,7 +240,8 @@ class Pulse:
         )
 
     def plot(self, form:str = "Cartesian", label:bool = True, title:str = None):
-        """Plot the pulse shape in Cartesian coordinates
+        """
+        Plot the pulse shape in Cartesian coordinates
         
         Parameters
         ----------
@@ -270,13 +275,15 @@ class Pulse:
             if label == True:
                 plt.ylabel('Phase (rad)',color='r')
         else:
-            raise ValueError('form should be one of the following: Cartesian, polar')
+            raise ValueError('form should be one of the following: Cartesian, \
+                             polar')
 
         plt.xlim(self.start, right=self.end)
         plt.title(title)
 
     def pulse2Xepr(self):
-        """Export the pulse to Xepr format
+        """
+        Export the pulse to Xepr format
                 
         Returns
         -------
@@ -291,7 +298,8 @@ class Pulse:
         return x_Xepr, y_Xepr
 
     def pulse2TopSpin(self):
-        """Export the pulse to TopSpin format
+        """
+        Export the pulse to TopSpin format
                 
         Returns
         -------
@@ -307,13 +315,18 @@ class Pulse:
         
 
     def pulse2Xepr_file(self):
-        """Export the pulse to a shape file (.shp) for Xepr"""
+        """
+        Export the pulse to a shape file (.shp) for Xepr
+        """
 
     def pulse2TopSpin_file(self):
-        """Export the pulse to a shape file for TopSpin"""
+        """
+        Export the pulse to a shape file for TopSpin
+        """
     
     def resonator_easyspin(self, eng, f, H_f, nu):
-        """ [EPR] Makes the pulse compensate for the resonator effects
+        """
+        [EPR] Makes the pulse compensate for the resonator effects
         
         It calls the resonator function from Easyspin with in Matlab
         Matlab, Easyspin and the Matlab engine are required:
@@ -411,7 +424,7 @@ class Shape(Pulse):
 
 class Parametrized(Shape):
 
-    "Class representing a parametrized AM/FM pulse"
+    """Class representing a parametrized AM/FM pulse"""
 
     def __init__(self, AM:str = "sinsmoothed", FM: str = "chirp", 
                  tp:float = None, bw:float = None, w1:float = None, 
@@ -449,7 +462,8 @@ class Parametrized(Shape):
                 n = 80 # default smoothing index value
             self.n = n
 
-            self.r = self.w1 * (1 - np.abs(np.sin((np.pi * (self.t - self.delta_t)) / self.tp))**self.n)
+            self.r = self.w1 * (1 - np.abs(np.sin(
+                     (np.pi * (self.t - self.delta_t)) / self.tp))**self.n)
 
         elif self.AM == "tanh":
             if B is None:
@@ -485,7 +499,8 @@ class Parametrized(Shape):
                 n = 40 # default smoothing factor (superGaussian index) n
             self.n = n
 
-            self.r = self.w1 * np.exp(-(2**(self.n + 2)) * ((self.t - self.delta_t) / self.tp)**self.n)
+            self.r = self.w1 * np.exp(-(2**(self.n + 2)) * \
+                     ((self.t - self.delta_t) / self.tp)**self.n)
 
         elif self.AM is None:
             self.r = self.w1 * np.ones(self.ns)
@@ -517,8 +532,8 @@ class Parametrized(Shape):
             # instant_phase_integral = (sweep_rate * t**2) / 2 + f0 * t;
 
             self.ph = self.phi0 + \
-                      np.pi * self.bw * (self.t - self.delta_t)**2 / self.tp + \
-                      2 * np.pi * self.delta_f * (self.t - self.delta_t)
+                      np.pi * self.bw * (self.t - self.delta_t)**2 / self.tp \
+                      + 2 * np.pi * self.delta_f * (self.t - self.delta_t)
         
         elif self.FM == "sech":
             if B is None:
@@ -529,7 +544,8 @@ class Parametrized(Shape):
             # instant_freq = 0.5 * bw * tanh(B*t);
             # instant_phase_integral = 0.5 * bw * (1/B) * log(cosh(B * (t)))
             self.ph = self.phi0 + \
-                      np.pi * self.bw * (1/self.B) * np.log(np.cosh(self.B * (self.t - self.delta_t))) + \
+                      np.pi * self.bw * (1/self.B) * \
+                      np.log(np.cosh(self.B * (self.t - self.delta_t))) + \
                       2 * np.pi * self.delta_f * (self.t - self.delta_t)
         
         elif self.FM is None:
@@ -547,7 +563,8 @@ class Parametrized(Shape):
         
 class OCT(Shape):
 
-    "Class representing a Optimizal Control Theory (OCT) pulse - could be implemented in the future"
+    """Class representing a Optimizal Control Theory (OCT) pulse - could be 
+    implemented in the future"""
 
     def __init__(self, algo=None, B1_range=None, **kwargs):
         Shape.__init__(self, **kwargs)
@@ -555,7 +572,8 @@ class OCT(Shape):
 
 class Composite(Shape):
 
-    "Class representing a composite pulse - could be implemented in the future"
+    """Class representing a composite pulse - could be implemented in the 
+    future"""
 
     pass
 
