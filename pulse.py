@@ -373,6 +373,8 @@ class Shape(Pulse):
     def reverse_sweep(self):
         if self.FM is not None:
             self.y = -self.y
+        else:
+            raise AttributeError('No sweep to be reversed (FM=None).')
 
 
 class Parametrized(Shape):
