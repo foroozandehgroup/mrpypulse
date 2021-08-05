@@ -89,7 +89,7 @@ class Pulse:
             raise TypeError('Exactly 2 of tp, np and tres should be used.')
         self.phi0 = phi0
         
-        if ns>10000:
+        if self.ns > 10000:
             inputStr=input('Number of pulse point > 10000! Input y to continue anyway.')
             if inputStr!="y":
                 raise ValueError('High number of puls point, execution cancelled.')
@@ -276,10 +276,35 @@ class Pulse:
         plt.title(title)
 
     def pulse2Xepr(self):
-        """Export the pulse to Xepr format"""
+        """Export the pulse to Xepr format
+                
+        Returns
+        -------
+        x: numpy array of floats
+            Pulse Cartesian coordinates x normalized from -1 to 1
+        y: numpy array of floats
+            Pulse Cartesian coordinates y normalized from -1 to 1
+        """
+        x_Xepr = self.x / self.w1
+        y_Xepr = self.y / self.w1
+        
+        return x_Xepr, y_Xepr
 
     def pulse2TopSpin(self):
-        """Export the pulse to TopSpin format"""
+        """Export the pulse to TopSpin format
+                
+        Returns
+        -------
+        r_TopSpin: numpy array of floats
+            Pulse amplitude normalized from 0 to 1
+        ph_TopSpin: numpy array of floats
+            Pulse phase normalized from 0° to 360°
+        """
+        r_TopSpin = self.r/self.w1
+        ph_TopSpin = np.rad2deg(self.ph)
+        
+        return r_TopSpin, ph_TopSpin
+        
 
     def pulse2Xepr_file(self):
         """Export the pulse to a shape file (.shp) for Xepr"""
@@ -388,7 +413,7 @@ class Parametrized(Shape):
 
     "Class representing a parametrized AM/FM pulse"
 
-    def __init__(self, AM="sinsmoothed", FM="chirp", 
+    def __init__(self, AM:str = "sinsmoothed", FM: str = "chirp", 
                  tp:float = None, bw:float = None, w1:float = None, 
                  Q:float = None, delta_f:float =0, 
                  n:int = None, sm:float = None, B:float = None, **kwargs):
