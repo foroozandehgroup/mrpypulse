@@ -14,10 +14,10 @@ class Pulse:
 
     """Class representing a pulse"""
 
-    def __init__(self, tp=None, ns=None, tres=None, 
+    def __init__(self, tp:float = None, ns:int = None, tres:float = None, 
                  x=None, y=None, 
                  r=None, ph=None, 
-                 phi0=0, start=0, ID=None):
+                 phi0:float = 0, start:float = 0, ID:str = None):
         """
         All attributes not input are generated.
 
@@ -26,7 +26,7 @@ class Pulse:
             2 of tp, np and tres
             either x and y or r and ph
 
-        Attributes
+        Parameters
         ----------
         tp: float
             duration (s)
@@ -53,7 +53,9 @@ class Pulse:
             start of the pulse (s)
         end: float
             end of the pulse
-        TODO discuss addition of flip angle and ID (name) +others?
+        ID: string
+            Identification pulse
+        TODO discuss addition of flip angle +others?
         """
         if x is None and y is None and r is None and ph is None:
             # no coordinates (empty pulse)
@@ -86,6 +88,11 @@ class Pulse:
         else:
             raise TypeError('Exactly 2 of tp, np and tres should be used.')
         self.phi0 = phi0
+        
+        if ns>10000:
+            inputStr=input('Number of pulse point > 10000! Input y to continue anyway.')
+            if inputStr!="y":
+                raise ValueError('High number of puls point, execution cancelled.')
 
         if hasattr(self, 'r'):
             if len(self.r) != self.ns:
@@ -382,8 +389,9 @@ class Parametrized(Shape):
     "Class representing a parametrized AM/FM pulse"
 
     def __init__(self, AM="sinsmoothed", FM="chirp", 
-                 tp=None, bw=None, w1=None, Q=None, delta_f=0,
-                 n=None, sm=None, B=None, **kwargs):
+                 tp:float = None, bw:float = None, w1:float = None, 
+                 Q:float = None, delta_f:float =0, 
+                 n:int = None, sm:float = None, B:float = None, **kwargs):
         """
         """
 

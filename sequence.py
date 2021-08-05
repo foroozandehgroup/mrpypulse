@@ -4,7 +4,7 @@ class Sequence:
     
     "Class representing a pulse sequence"
 
-    def __init__(self, pulses, total_time=None, pc=None):
+    def __init__(self, pulses, total_time: float = None, pc=None):
         """
         Parameters
         ----------
@@ -59,7 +59,7 @@ class Sequence:
         # insert pulse in pulse list
         # update total time and pulse positions
 
-    def insert_delay(self, delay,position):
+    def insert_delay(self, delay, position):
         """
         Parameters
         ----------
