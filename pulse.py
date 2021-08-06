@@ -9,7 +9,7 @@ class Pulse:
 
     """
     Class representing a pulse
-    
+
     All attributes not input are generated.
 
     Required Parameters
@@ -49,10 +49,10 @@ class Pulse:
     TODO discuss addition of flip angle +others?
     """
 
-    def __init__(self, tp:float = None, ns:int = None, tres:float = None, 
-                 x=None, y=None, 
-                 r=None, ph=None, 
-                 phi0:float = 0, start:float = 0, ID:str = None):
+    def __init__(self, tp: float = None, ns: int = None, tres: float = None,
+                 x=None, y=None,
+                 r=None, ph=None,
+                 phi0: float = 0, start: float = 0, ID: str = None):
         if ID is not None:
             self.ID = ID
         if x is None and y is None and r is None and ph is None:
@@ -69,7 +69,8 @@ class Pulse:
             if len(x) != len(y):
                 raise ValueError('x and y should have the same length')
         else:
-            raise TypeError('Coordinates should be input as either x and y or r and ph.')
+            raise TypeError('Coordinates should be input as'
+                            ' either x and y or r and ph.')
 
         if tres is None and tp is not None and ns is not None:
             self.tp = tp
@@ -82,33 +83,36 @@ class Pulse:
         elif ns is None and tp is not None and tres is not None:
             self.tp = tp
             self.ns = int(np.floor(tp / tres))
-            self.tres = tp / self.ns # tres adjusted for the rouding on n
+            self.tres = tp / self.ns  # tres adjusted for the rouding on n
         else:
             raise TypeError('Exactly 2 of tp, np and tres should be used.')
         self.phi0 = phi0
-        
+
         if self.ns > 10000:
-            inputStr=input('Number of pulse point > 10000! Input y to continue anyway.')
-            if inputStr!="y":
-                raise ValueError('High number of puls point, execution cancelled.')
+            inputStr = input(
+                'Number of pulse point > 10000! Input y to continue anyway.')
+            if inputStr != "y":
+                raise ValueError(
+                    'High number of puls point, execution cancelled.')
 
         if hasattr(self, 'r'):
             if len(self.r) != self.ns:
-                raise ValueError('Pulse coordinates length and ns do no match.')
+                raise ValueError(
+                    'Pulse coordinates length and ns do no match.')
             self.w1 = np.max(self.r)
 
         self.start = start
         self.end = self.start + self.tp
 
         # t defines the position of each segment (defined in the middle)
-        self.t = np.linspace(self.start+self.tres/2, self.end-self.tres/2, self.ns)
+        self.t = np.linspace(
+                 self.start+self.tres/2, self.end-self.tres/2, self.ns)
 
     def __setattr__(self, name, value):
         """
         Handles multiple attributes modification when one attribute is modified
-        
-        
-        Set up the attribute identified by name with value. Attributes which 
+
+        Set up the attribute identified by name with value. Attributes which
         causes other modifications:
         r or ph:
             x, y, w1 update
@@ -122,33 +126,38 @@ class Pulse:
             pulse position changed (start/end/t updated)
         t:
             needs to be compatible with pulse duration and number of points
-        
+
         Particular conditions are set up to take into account the calls made in
         __init__
         """
-        
+
         # already initialized special cases
         if name == 'w1' and hasattr(self, 'w1'):
             # scale coordinates (calls __setattr__ recursively)
-            self.r = value * self.r/max(self.r)     
+            self.r = value * self.r/max(self.r)
         elif name == 'phi0' and hasattr(self, 'phi0'):
             # reset phi0 on ph
             object.__setattr__(self, 'ph', self.ph - self.phi0)
-           
+
         elif name == 'start' and hasattr(self, 'start'):
             object.__setattr__(self, 'end', value + self.tp)
-            object.__setattr__(self, 't', np.linspace(value+self.tres/2, self.end-self.tres/2, self.ns))
-        
+            object.__setattr__(
+                self, 't',
+                np.linspace(value+self.tres/2, self.end-self.tres/2, self.ns))
+
         elif name == 'end' and hasattr(self, 'end'):
             object.__setattr__(self, 'start', value - self.tp)
-            object.__setattr__(self, 't', np.linspace(self.start+self.tres/2, value-self.tres/2, self.ns))
-            
+            object.__setattr__(
+                self, 't',
+                np.linspace(
+                    self.start+self.tres/2, value-self.tres/2, self.ns))
+
         elif name == 't' and hasattr(self, 't'):
             object.__setattr__(self, 'start', value[0] - self.tres/2)
             object.__setattr__(self, 'end', value[-1] + self.tres/2)
-            if np.isclose(value[-1] - value[0], self.tp, rtol=1e-6, atol=1e-15):
+            if np.isclose(value[-1]-value[0], self.tp, rtol=1e-6, atol=1e-15):
                 raise ValueError('Vector t not compatible with tp.')
-            if value != self.ns:
+            if len(value) != self.ns:
                 raise ValueError('t should has a different number of point.')
 
         # TODO tres/ns/tp modification and how they would affect each other
@@ -165,20 +174,20 @@ class Pulse:
             object.__setattr__(self, 'y', self.r * np.sin(self.ph))
             if hasattr(self, 'w1'):
                 object.__setattr__(self, 'w1', np.max(self.r))
-        
+
         elif (name == 'x' or name == 'y') and hasattr(self, 'x') and hasattr(self, 'y'):
             object.__setattr__(self, 'r', np.sqrt(self.x**2 + self.y**2))
             object.__setattr__(self, 'ph', np.arctan2(self.y, self.x))
             if hasattr(self, 'w1'):
                 object.__setattr__(self, 'w1', np.max(self.r))
-        
+
         elif name == 'phi0' and hasattr(self, 'phi0') and hasattr(self, 'ph'):
-            self.ph = self.ph + self.phi0 # calls __setattr__ recursively
+            self.ph = self.ph + self.phi0  # calls __setattr__ recursively
 
     def __radd__(self, pulse2add):
         """
         Pulse addition operation defined as sum of Cartesian coordinates
-        
+
         Parameters
         ----------
         pulse2sum: pulse object
@@ -189,15 +198,16 @@ class Pulse:
         pulse_sum: pulse object
             sum of the pulses at their position
 
-        If the pulses do not overlap, the delay between them is encoded as 
+        If the pulses do not overlap, the delay between them is encoded as
         coordinates of value 0.
         Attribute information from original pulses (such as phase offset)
         is lost.
         """
         # TODO testing
         # TODO __rsub__
-        if  not np.isclose(self.tres, pulse2add.tres, rtol=1e-6, atol=1e-12):
-            raise ValueError('Pulses can only be added if their tres is the same.')
+        if not np.isclose(self.tres, pulse2add.tres, rtol=1e-6, atol=1e-12):
+            raise ValueError(
+                'Pulses can only be added if their tres is the same.')
 
         # initialization
         tres = self.tres
@@ -207,13 +217,13 @@ class Pulse:
         t = np.arange(start+self.tres/2, end-self.tres/2, tres)
         x = np.empty(len(t))
         y = np.empty(len(t))
-        j = 0 # first pulse index
-        k = 0 # second pulse index
+        j = 0  # first pulse index
+        k = 0  # second pulse index
 
         for i, val in t:
-            
-            x[i]=0
-            y[i]=0
+
+            x[i] = 0
+            y[i] = 0
 
             if self.start < val < self.stop:
                 x[i] += self.x[j]
@@ -223,7 +233,8 @@ class Pulse:
                 x[i] += self.x[k]
                 k += 1
 
-        pulse_sum = Pulse(tres=tres, tp=tp, x=np.array(x), y=np.array(y), start=start)
+        pulse_sum = Pulse(
+            tres=tres, tp=tp, x=np.array(x), y=np.array(y), start=start)
 
         return pulse_sum
 
@@ -233,15 +244,16 @@ class Pulse:
         ----------
             - p, pulse to compare
 
-        2 pulses are considered equal if they have the same coordinates, 
+        2 pulses are considered equal if they have the same coordinates,
         time resolution and number of points.
-        They can take different position and have different additional attributes
+        They can take different positions and have different additional
+        attributes.
         """
         # TODO testing
         if np.allclose(self.x, p.x, rtol=1e-6, atol=1e-15) and \
-            np.allclose(self.y, p.y, rtol=1e-6, atol=1e-15) and \
-            np.isclose(self.tres, p.tres, rtol=1e-6, atol=1e-15) and \
-            self.ns==p.ns:
+           np.allclose(self.y, p.y, rtol=1e-6, atol=1e-15) and \
+           np.isclose(self.tres, p.tres, rtol=1e-6, atol=1e-15) and \
+           self.ns == p.ns:
             return True
         else:
             return False
@@ -256,12 +268,12 @@ class Pulse:
         """
         Convert pulse object to string (typically used by print)
         """
-        
+
         pulsestr = 'Pulse object with the following attributes\n'
-        
+
         if hasattr(self, 'ID'):
             pulsestr += f'ID:    {self.ID}\n'
-            
+
         pulsestr += (f'tp:    {self.tp}\n'
                      f'ns:    {self.ns}\n'
                      f'tres:  {self.tres}\n'
@@ -273,13 +285,14 @@ class Pulse:
                      f'y:     [{self.y[0]} ... {self.y[-1]}]\n'
                      f'r:     [{self.r[0]} ... {self.r[-1]}]\n'
                      f'ph:    [{self.ph[0]} ... {self.ph[-1]}]\n')
-            
+
         return pulsestr
 
-    def plot(self, form:str = "Cartesian", label:bool = True, title:str = None):
+    def plot(self,
+             form: str = "Cartesian", label: bool = True, title: str = None):
         """
         Plot the pulse shape in Cartesian coordinates
-        
+
         Parameters
         ----------
         type: string
@@ -289,27 +302,27 @@ class Pulse:
 
         Might require figure() before call and show() after.
         """
-        if label == True:
-            plt.xlabel('Time (s)') # before potential call to twinx()
-        
+        if label:
+            plt.xlabel('Time (s)')  # before potential call to twinx()
+
         if form == "Cartesian":
             plt.plot(self.t, self.x)
             plt.plot(self.t, self.y, 'r')
-            
+
             plt.ylim(-self.w1, self.w1)
-            if label == True:
+            if label:
                 plt.ylabel('Cartesian coordinates (Hz)')
-            
+
         elif form == "polar":
             plt.plot(self.t, self.r)
-            plt.ylabel('Amplitude (Hz)',color='C0')
+            plt.ylabel('Amplitude (Hz)', color='C0')
             plt.ylim(-self.w1, self.w1)
-            
+
             ax = plt.gca()
             ax.twinx()
             plt.plot(self.t, self.ph, 'r')
-            if label == True:
-                plt.ylabel('Phase (rad)',color='r')
+            if label:
+                plt.ylabel('Phase (rad)', color='r')
         else:
             raise ValueError('form should be one of the following: Cartesian, \
                              polar')
@@ -320,7 +333,7 @@ class Pulse:
     def pulse2Xepr(self):
         """
         Export the pulse to Xepr format
-                
+
         Returns
         -------
         x: numpy array of floats
@@ -330,13 +343,13 @@ class Pulse:
         """
         x_Xepr = self.x / self.w1
         y_Xepr = self.y / self.w1
-        
+
         return x_Xepr, y_Xepr
 
     def pulse2TopSpin(self):
         """
         Export the pulse to TopSpin format
-                
+
         Returns
         -------
         r_TopSpin: numpy array of floats
@@ -346,7 +359,7 @@ class Pulse:
         """
         r_TopSpin = self.r/self.w1
         ph_TopSpin = np.rad2deg(self.ph)
-        
+
         return r_TopSpin, ph_TopSpin
 
     def pulse2Xepr_file(self):
@@ -358,11 +371,11 @@ class Pulse:
         """
         Export the pulse to a shape file for TopSpin
         """
-    
+
     def resonator_easyspin(self, eng, f, H_f, nu):
         """
         [EPR] Makes the pulse compensate for the resonator effects
-        
+
         It calls the resonator function from Easyspin with in Matlab
         Matlab, Easyspin and the Matlab engine are required:
         http://mathworks.com/products/matlab.html
@@ -383,23 +396,22 @@ class Pulse:
             transfer function of the resonator
         nu: float
             the frequency on which to center the resonator compensation, in GHz
-        
+
         The transfer function of the resonator H_f is used to change the
         pulse shape to account for the resonator.
         The pulse amplitude amp and phase ph are modified.
         """
-        
 
         try:
             import matlab.engine
         except:
             pass
-        
+
         # TODO test this method
         t = self.t * 1e6
         y_t = self.x + self.y * 1j
         nres = f.size*8
-        
+
         # Easyspin resonator function needs unique values
         H_f, index = np.unique(H_f, return_index=True) 
         f_interp = scipy.interpolate.interp1d(f[index], H_f, kind='cubic')
@@ -415,17 +427,18 @@ class Pulse:
         H_fmat = matlab.double(H_f.tolist())
 
         # Easyspin resonator function call
-        t2, y_t2 = eng.resonator(tmat, y_tmat, nu, fmat, H_fmat, \
+        t2, y_t2 = eng.resonator(tmat, y_tmat, nu, fmat, H_fmat,
                                  'compensate', nargout=2)
 
         t2 = np.ravel(np.asarray(t2))
         y_t2 = np.ravel(np.asarray(y_t2))
         y_t2 = np.interp(t, t2, y_t2)
 
-        y_t2 = np.real(y_t2) / max(np.real(y_t2)) + 1j * np.imag(y_t2) / max(np.imag(y_t2))
+        y_t2 = np.real(y_t2) / max(np.real(y_t2)) + \
+            1j * np.imag(y_t2) / max(np.imag(y_t2))
 
         self.r = 100 * abs(y_t2)
-        self.ph = np.angle(y_t2,deg=True) % 360
+        self.ph = np.angle(y_t2, deg=True) % 360
 
 
 class Hard(Pulse):
@@ -447,8 +460,8 @@ class Hard(Pulse):
 
         # TO DO: require testing
         """
-        Pulse.__init__(self, tp=tp, ns=2, tres=tp/2, 
-                       r=np.array([w1, w1]), ph=np.array([0, 0]), 
+        Pulse.__init__(self, tp=tp, ns=2, tres=tp/2,
+                       r=np.array([w1, w1]), ph=np.array([0, 0]),
                        phi0=0, start=0)
 
 
@@ -457,11 +470,11 @@ class Shape(Pulse):
     """Class representing a shaped pulse."""
 
     def __init__(self, AM=None, FM=None, bw=None, sm=None, n=None, **kwargs):
-       
+
         Pulse.__init__(self, **kwargs)
 
         self.bw = bw
-        
+
         # test to distinguish no modulation from unknown modulation
         if AM is None:
             # test on self.r
@@ -482,7 +495,7 @@ class Parametrized(Shape):
 
     """
     Class representing a parametrized AM/FM pulse
-    
+
     Parameters
     ----------
     AM: string
@@ -504,15 +517,15 @@ class Parametrized(Shape):
     sm: float
         smoothing percentage for sinsmoothed AM
     B: float
-        smoothing index for HS pulses      
+        smoothing index for HS pulses
     **kwargs
         other argurments to transmit to parent classes
     """
 
-    def __init__(self, AM:str = "sinsmoothed", FM: str = "chirp", 
-                 tp:float = None, bw:float = None, w1:float = None, 
-                 Q:float = None, delta_f:float =0, 
-                 n:int = None, sm:float = None, B:float = None, **kwargs):
+    def __init__(self, AM: str = "sinsmoothed", FM: str = "chirp",
+                 tp: float = None, bw: float = None, w1: float = None,
+                 Q: float = None, delta_f: float = 0,
+                 n: int = None, sm: float = None, B: float = None, **kwargs):
 
         if FM is not None:
             if w1 is None and bw is not None and tp is not None and Q is not None:
@@ -524,10 +537,11 @@ class Parametrized(Shape):
             elif Q is None  and bw is not None and tp is not None and w1 is not None:
                 Q = w1**2 * 2 * np.pi * tp / bw
             else:
-                raise TypeError('Exactly 3 of Q, w1, tp and bw should be input.')
+                raise TypeError('Exactly 3 of Q, w1, tp and bw should be used '
+                                'as parameters.')
             self.Q = Q
             self.w1 = w1
-            
+
         Shape.__init__(self, AM=AM, FM=FM, bw=bw, tp=tp, **kwargs)
 
         # frequency offset
@@ -535,12 +549,12 @@ class Parametrized(Shape):
 
         # position delta_t
         self.delta_t = self.start + self.tp/2
-        
+
         # amplitude modulation
         self.AM = AM
         if self.AM == "WURST":
             if n is None:
-                n = 80 # default smoothing index value
+                n = 80  # default smoothing index value
             self.n = n
 
             self.r = self.w1 * (1 - np.abs(np.sin(
@@ -554,10 +568,9 @@ class Parametrized(Shape):
             # sech = 1/cosh
             self.r = self.w1 * 1/np.cosh(self.B*(self.t-self.delta_t))
 
-
         elif self.AM == "sinsmoothed":
             if sm is None:
-                sm = 10 # default smoothing percentage value
+                sm = 10  # default smoothing percentage value
             self.sm = sm
 
             # number of points smoothed
@@ -571,13 +584,13 @@ class Parametrized(Shape):
             # amplitude apodized with a sine function taken from 0 to pi/2
             smoothed_side = self.w1 * (np.sin(np.linspace(0, np.pi/2, n_sm)))
 
-            self.r = np.concatenate((smoothed_side, 
-                                     unsmoothed_middle, 
+            self.r = np.concatenate((smoothed_side,
+                                     unsmoothed_middle,
                                      np.flip(smoothed_side)))
 
         elif self.AM == "superGaussian":
             if n is None:
-                n = 40 # default smoothing factor (superGaussian index) n
+                n = 40  # default smoothing factor (superGaussian index) n
             self.n = n
 
             self.r = self.w1 * np.exp(-(2**(self.n + 2)) * \
@@ -599,7 +612,7 @@ class Parametrized(Shape):
                 self.sm = 100 * i_sm / self.ns;
             catch:
                 print('Smoothing sm could not be computed')
-        """       
+        """
 
         # phase/frequency modulation
         self.FM = FM
@@ -609,13 +622,13 @@ class Parametrized(Shape):
         elif self.FM == "chirp":
             # phase calculated from instantaneous frequency
             # d(phase)/dt = sweep_rate * t + f0 (= instant. phase.)
-            # sweep_rate = bw / tp;     
+            # sweep_rate = bw / tp;
             # instant_phase_integral = (sweep_rate * t**2) / 2 + f0 * t;
 
             self.ph = self.phi0 + \
                       np.pi * self.bw * (self.t - self.delta_t)**2 / self.tp \
                       + 2 * np.pi * self.delta_f * (self.t - self.delta_t)
-        
+
         elif self.FM == "sech":
             if B is None:
                 B = 10.6/self.tp
@@ -628,10 +641,10 @@ class Parametrized(Shape):
                       np.pi * self.bw * (1/self.B) * \
                       np.log(np.cosh(self.B * (self.t - self.delta_t))) + \
                       2 * np.pi * self.delta_f * (self.t - self.delta_t)
-        
+
         elif self.FM is None:
             self.ph = self.phi0 * np.ones(self.ns)
-    
+
     def __setattr__(self, name, value):
         """
         """
@@ -641,10 +654,10 @@ class Parametrized(Shape):
         # set attribute value
         Pulse.__setattr__(self, name, value)
 
-        
+
 class OCT(Shape):
 
-    """Class representing a Optimizal Control Theory (OCT) pulse - could be 
+    """Class representing a Optimizal Control Theory (OCT) pulse - could be
     implemented in the future"""
 
     def __init__(self, algo=None, B1_range=None, **kwargs):
@@ -653,8 +666,7 @@ class OCT(Shape):
 
 class Composite(Shape):
 
-    """Class representing a composite pulse - could be implemented in the 
+    """Class representing a composite pulse - could be implemented in the
     future"""
 
     pass
-
