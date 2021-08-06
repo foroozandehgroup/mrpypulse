@@ -82,8 +82,18 @@ class Pulse:
             self.tres = tres
         elif ns is None and tp is not None and tres is not None:
             self.tp = tp
-            self.ns = int(np.floor(tp / tres))
-            self.tres = tp / self.ns  # tres adjusted for the rouding on n
+            ns = tp/tres
+            self.ns = int(ns)
+            # if np.modf(ns)[0] > 0.99999:  # account for float type operations
+            #     self.ns = int(np.ceil(ns))
+            # else:
+            #     self.ns = int(np.floor(ns))
+            self.tres = tp / self.ns  # tres adjusted for the rouding on ns
+
+            print('oklm')
+            print(tp/tres)
+            print(self.ns)
+
         else:
             raise TypeError('Exactly 2 of tp, np and tres should be used.')
         self.phi0 = phi0
@@ -96,7 +106,12 @@ class Pulse:
                     'High number of puls point, execution cancelled.')
 
         if hasattr(self, 'r'):
+
             if len(self.r) != self.ns:
+                print('   ')
+                print(tp/tres)
+                print(self.ns)
+                print(len(self.r))
                 raise ValueError(
                     'Pulse coordinates length and ns do no match.')
             self.w1 = np.max(self.r)
@@ -184,7 +199,7 @@ class Pulse:
         elif name == 'phi0' and hasattr(self, 'phi0') and hasattr(self, 'ph'):
             self.ph = self.ph + self.phi0  # calls __setattr__ recursively
 
-    def __radd__(self, pulse2add):
+    def __add__(self, pulse2add):
         """
         Pulse addition operation defined as sum of Cartesian coordinates
 
@@ -211,30 +226,42 @@ class Pulse:
 
         # initialization
         tres = self.tres
-        start = np.min(self.start, pulse2add.start)
-        end = np.max(self.end, pulse2add.end)
+        start = np.min([self.start, pulse2add.start])
+        end = np.max([self.end, pulse2add.end])
         tp = end - start
-        t = np.arange(start+self.tres/2, end-self.tres/2, tres)
+        ns = tp/tres
+        # TODO cleaner solution: only use int(), no rounding and catch errors if too far
+        # not working tho
+        if np.modf(ns)[0] > 0.99999:  # account for float type operations
+            ns = int(np.ceil(ns))
+        else:
+            ns = int(np.floor(ns))
+
+        ns = int(ns)
+        tres = tp / ns  # tres adjusted for the rouding on n
+
+        t = np.linspace(start+tres/2, end-tres/2, ns)
+
         x = np.empty(len(t))
         y = np.empty(len(t))
         j = 0  # first pulse index
         k = 0  # second pulse index
 
-        for i, val in t:
+        for i in range(ns):
 
             x[i] = 0
             y[i] = 0
 
-            if self.start < val < self.end:
+            if self.start < t[i] < self.end:
                 x[i] += self.x[j]
                 j += 1
 
-            if self.start < val < self.end:
-                x[i] += self.x[k]
+            if pulse2add.start < t[i] < pulse2add.end:
+                x[i] += pulse2add.x[k]
                 k += 1
 
         pulse_sum = Pulse(
-            tres=tres, tp=tp, x=np.array(x), y=np.array(y), start=start)
+            ns=ns, tp=tp, x=np.array(x), y=np.array(y), start=start)
 
         return pulse_sum
 
@@ -625,12 +652,12 @@ class Parametrized(Shape):
             self.sm = sm
 
             # number of points smoothed
-            n_sm = np.floor((self.ns * self.sm) / 100)
+            n_sm = int(np.floor((self.ns * self.sm) / 100))
 
             # number of points unsmoothed
-            n_unsm = self.ns - (2 * n_sm)
+            n_unsm = int(self.ns - (2 * n_sm))
 
-            unsmoothed_middle = self.w1 * np.ones(int(n_unsm))
+            unsmoothed_middle = self.w1 * np.ones(n_unsm)
 
             # amplitude apodized with a sine function taken from 0 to pi/2
             smoothed_side = self.w1 * (np.sin(np.linspace(0, np.pi/2, n_sm)))

@@ -90,16 +90,43 @@ def test_pulse_setattr():
     assert p1 == p2
 
 
+def test_pulse_radd():
+    p1 = random_pulse()
+    p2 = copy.deepcopy(p1)
+    p3 = p1 + p2
+    print(p1)
+    print(p3)
+    assert np.allclose(p3.x, p1.x+p2.x, rtol=1e-6, atol=1e-15)
+    assert not np.isclose(p3.w1, p1.w1, rtol=1e-6, atol=1e-15)
+    p1 += p2
+    assert p1 == p3
+
+
 def test_parametrized_init():
     # assert Q, w1, tp, bw equivalence
-    am = "WURST"
-    fm = "chirp"
-    tres = 0.5e-6
-    tp = 500e-6
-    Q = 5
-    bw = 300e3
+    (am, fm, tres, tp, Q, bw) = ("WURST", "chirp", 0.5e-6, 500e-6, 5, 300e3)
     p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tres)
     p2 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, w1=p1.w1, tres=tres)
     p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, bw=bw, w1=p1.w1, tres=tres)
     p4 = pulse.Parametrized(AM=am, FM=fm, Q=Q, bw=bw, w1=p1.w1, tres=tres)
     assert p1 == p2 == p3 == p4
+
+
+def test_parametrized_str():
+    (am, fm, tres, tp, Q, bw) = \
+        ("sinsmoothed", "chirp", 0.5e-6, 500e-6, 5, 300e3)
+    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tres)
+    p2 = copy.deepcopy(p1)
+    assert str(p1) == str(p2)
+
+
+def test_parametrized_reverse_sweep():
+    (am, fm, tres, tp, Q, bw) = \
+        ("superGaussian", "chirp", 0.5e-6, 500e-6, 5, 300e3)
+    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tres)
+    p2 = copy.deepcopy(p1)
+    p1.reverse_sweep()
+    assert np.allclose(p1.y, -p2.y, rtol=1e-6, atol=1e-15)
+    assert not np.allclose(p1.ph, -p2.ph, rtol=1e-6, atol=1e-15)
+    p1.reverse_sweep()
+    assert p1 == p2
