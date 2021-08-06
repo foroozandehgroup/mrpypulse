@@ -272,17 +272,17 @@ class Pulse:
         if hasattr(self, 'ID'):
             pulsestr += f'ID:    {self.ID}\n'
 
-        pulsestr += (f'tp:    {self.tp}\n'
-                     f'ns:    {self.ns}\n'
-                     f'tres:  {self.tres}\n'
-                     f'start: {self.start}\n'
-                     f'end:   {self.end}\n'
-                     f'w1:    {self.w1}\n'
-                     f'phi0:  {self.phi0}\n'
-                     f'x:     [{self.x[0]} ... {self.x[-1]}]\n'
-                     f'y:     [{self.y[0]} ... {self.y[-1]}]\n'
-                     f'r:     [{self.r[0]} ... {self.r[-1]}]\n'
-                     f'ph:    [{self.ph[0]} ... {self.ph[-1]}]\n')
+        pulsestr += (f'tp:      {self.tp}\n'
+                     f'ns:      {self.ns}\n'
+                     f'tres:    {self.tres}\n'
+                     f'start:   {self.start}\n'
+                     f'end:     {self.end}\n'
+                     f'w1:      {self.w1}\n'
+                     f'phi0:    {self.phi0}\n'
+                     f'x:       [{self.x[0]} ... {self.x[-1]}]\n'
+                     f'y:       [{self.y[0]} ... {self.y[-1]}]\n'
+                     f'r:       [{self.r[0]} ... {self.r[-1]}]\n'
+                     f'ph:      [{self.ph[0]} ... {self.ph[-1]}]\n')
 
         return pulsestr
 
@@ -500,6 +500,17 @@ class Shape(Pulse):
             if np.all(self.ph != self.ph[0]):
                 self.FM = "unknown"
 
+    def __str__(self):
+        """
+        Convert shape object to string (typically used by print)
+        """
+        shape_str = super().__str__() +\
+            (f'FM:      {self.FM}\n'
+             f'AM:      {self.AM}\n'
+             f'bw:      {self.bw}\n')
+
+        return shape_str
+
     def reverse_sweep(self):
         """
         Reverse the sweep of a shape pulse
@@ -691,10 +702,30 @@ class Parametrized(Shape):
         """
         # TODO delta_t modif
         # TODO other modifs with constructor?
-        # TODO: tres/tp/ns
+        # TODO: tres/tp/ns -> modify them differntly
+        # (no need to interpolate but would destroy pulse tweaks)
 
         # set attribute value
         Pulse.__setattr__(self, name, value)
+
+    def __str__(self):
+        """
+        Convert parametrized object to string (typically used by print)
+        """
+        parametrized_str = super().__str__()
+
+        if hasattr(self, 'FM'):
+            parametrized_str += (f'delta_f: {self.delta_f}\n'
+                                 f'Q:       {self.Q}\n')
+
+        if hasattr(self, 'n'):
+            parametrized_str += f'n:       {self.n}\n'
+        if hasattr(self, 'sm'):
+            parametrized_str += f'sm:      {self.sm}\n'
+        if hasattr(self, 'B'):
+            parametrized_str += f'B:       {self.B}\n'
+
+        return parametrized_str
 
 
 class OCT(Shape):
