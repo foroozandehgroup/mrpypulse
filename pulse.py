@@ -164,18 +164,18 @@ class Pulse:
         # e.g.
         #   - tres -> modif np [requires interpolation]?
         #   - tp -> lower tres and no ns modif? +modify t/end
-        #   - ns -> modif tres?
+        #   - ns -> modif tres? [requires interpolation]?
 
         # set attribute value
         object.__setattr__(self, name, value)
 
-        if (name == 'ph' or name == 'r') and hasattr(self, 'r') and hasattr(self, 'ph'):
+        if name in ('ph', 'r') and hasattr(self, 'r') and hasattr(self, 'ph'):
             object.__setattr__(self, 'x', self.r * np.cos(self.ph))
             object.__setattr__(self, 'y', self.r * np.sin(self.ph))
             if hasattr(self, 'w1'):
                 object.__setattr__(self, 'w1', np.max(self.r))
 
-        elif (name == 'x' or name == 'y') and hasattr(self, 'x') and hasattr(self, 'y'):
+        elif name in ('x', 'y') and hasattr(self, 'x') and hasattr(self, 'y'):
             object.__setattr__(self, 'r', np.sqrt(self.x**2 + self.y**2))
             object.__setattr__(self, 'ph', np.arctan2(self.y, self.x))
             if hasattr(self, 'w1'):
@@ -225,11 +225,11 @@ class Pulse:
             x[i] = 0
             y[i] = 0
 
-            if self.start < val < self.stop:
+            if self.start < val < self.end:
                 x[i] += self.x[j]
                 j += 1
 
-            if self.start < val < self.stop:
+            if self.start < val < self.end:
                 x[i] += self.x[k]
                 k += 1
 
@@ -249,14 +249,12 @@ class Pulse:
         They can take different positions and have different additional
         attributes.
         """
-        # TODO testing
-        if np.allclose(self.x, p.x, rtol=1e-6, atol=1e-15) and \
-           np.allclose(self.y, p.y, rtol=1e-6, atol=1e-15) and \
-           np.isclose(self.tres, p.tres, rtol=1e-6, atol=1e-15) and \
-           self.ns == p.ns:
-            return True
-        else:
-            return False
+        eq = np.allclose(self.x, p.x, rtol=1e-6, atol=1e-15) and \
+            np.allclose(self.y, p.y, rtol=1e-6, atol=1e-15) and \
+            np.isclose(self.tres, p.tres, rtol=1e-6, atol=1e-15) and \
+            self.ns == p.ns
+
+        return eq
 
     def __ne__(self, p):
         """
@@ -404,8 +402,8 @@ class Pulse:
 
         try:
             import matlab.engine
-        except:
-            pass
+        except ImportError:
+            print('matlab.engine could not be imported.')
 
         # TODO test this method
         t = self.t * 1e6
@@ -413,7 +411,7 @@ class Pulse:
         nres = f.size*8
 
         # Easyspin resonator function needs unique values
-        H_f, index = np.unique(H_f, return_index=True) 
+        H_f, index = np.unique(H_f, return_index=True)
         f_interp = scipy.interpolate.interp1d(f[index], H_f, kind='cubic')
 
         # number of points of resonator profile extension
@@ -460,16 +458,34 @@ class Hard(Pulse):
 
         # TO DO: require testing
         """
+        # TOD execution should raise an error
         Pulse.__init__(self, tp=tp, ns=2, tres=tp/2,
                        r=np.array([w1, w1]), ph=np.array([0, 0]),
-                       phi0=0, start=0)
+                       **kwargs)
 
 
 class Shape(Pulse):
 
-    """Class representing a shaped pulse."""
+    """
+    Class representing a shaped pulse.
 
-    def __init__(self, AM=None, FM=None, bw=None, sm=None, n=None, **kwargs):
+    Parameters
+    ----------
+    AM: string
+        amplitude modulation type
+    FM: string
+        frequency modulation type
+    bw: float
+        bandwidth (Hz)
+    **kwargs
+        TODO document **kwargs throughout the code
+
+    A shaped pulse is a pulse which can be amplitude-modulated (AM) and/or
+    frequency-modulated
+    """
+
+    def __init__(self, AM: str = None, FM: str = None, bw: float = None,
+                 **kwargs):
 
         Pulse.__init__(self, **kwargs)
 
@@ -485,6 +501,14 @@ class Shape(Pulse):
                 self.FM = "unknown"
 
     def reverse_sweep(self):
+        """
+        Reverse the sweep of a shape pulse
+
+        Raises
+        ------
+        AttributeError
+            if no FM is used, the pulse cannot be reversed
+        """
         if self.FM is not None:
             self.y = -self.y
         else:
@@ -499,9 +523,11 @@ class Parametrized(Shape):
     Parameters
     ----------
     AM: string
-        amplitude modulation
+        amplitude modulation, can take the following values: WURST,
+        sinsmoothed (default), superGaussian, thanh
     FM: string
-        frequency modulation
+        frequency modulation, can take the following values: chirp (default),
+        sech
     tp: float
         cf. Pulse
     bw: float
@@ -520,6 +546,11 @@ class Parametrized(Shape):
         smoothing index for HS pulses
     **kwargs
         other argurments to transmit to parent classes
+
+    Parametrized shaped pulses make use of analytical function for their
+    waveforms.
+    Exactly 3 of tp, bw, w1 and Q should be used to creat a parametrized shaped
+    pulse which is frequency modulated.
     """
 
     def __init__(self, AM: str = "sinsmoothed", FM: str = "chirp",
@@ -528,14 +559,23 @@ class Parametrized(Shape):
                  n: int = None, sm: float = None, B: float = None, **kwargs):
 
         if FM is not None:
-            if w1 is None and bw is not None and tp is not None and Q is not None:
+
+            if w1 is None and bw is not None and \
+                    tp is not None and Q is not None:
                 w1 = np.sqrt(bw * Q / (2 * np.pi * tp))
-            elif tp is None and bw is not None and Q is not None and w1 is not None:
+
+            elif tp is None and bw is not None and \
+                    Q is not None and w1 is not None:
                 tp = bw * Q / (2 * np.pi * w1**2)
-            elif bw is None and tp is not None and Q is not None and w1 is not None:
+
+            elif bw is None and tp is not None and \
+                    Q is not None and w1 is not None:
                 bw = w1**2 * 2 * np.pi * tp / Q
-            elif Q is None  and bw is not None and tp is not None and w1 is not None:
+
+            elif Q is None and bw is not None and \
+                    tp is not None and w1 is not None:
                 Q = w1**2 * 2 * np.pi * tp / bw
+
             else:
                 raise TypeError('Exactly 3 of Q, w1, tp and bw should be used '
                                 'as parameters.')
@@ -592,9 +632,10 @@ class Parametrized(Shape):
             if n is None:
                 n = 40  # default smoothing factor (superGaussian index) n
             self.n = n
-
-            self.r = self.w1 * np.exp(-(2**(self.n + 2)) * \
-                     ((self.t - self.delta_t) / self.tp)**self.n)
+            self.r = self.w1 * \
+                np.exp(
+                    -2**(self.n + 2) *
+                    ((self.t - self.delta_t) / self.tp)**self.n)
 
         elif self.AM is None:
             self.r = self.w1 * np.ones(self.ns)
@@ -638,9 +679,9 @@ class Parametrized(Shape):
             # instant_freq = 0.5 * bw * tanh(B*t);
             # instant_phase_integral = 0.5 * bw * (1/B) * log(cosh(B * (t)))
             self.ph = self.phi0 + \
-                      np.pi * self.bw * (1/self.B) * \
-                      np.log(np.cosh(self.B * (self.t - self.delta_t))) + \
-                      2 * np.pi * self.delta_f * (self.t - self.delta_t)
+                np.pi * self.bw * (1/self.B) * \
+                np.log(np.cosh(self.B * (self.t - self.delta_t))) + \
+                2 * np.pi * self.delta_f * (self.t - self.delta_t)
 
         elif self.FM is None:
             self.ph = self.phi0 * np.ones(self.ns)
@@ -650,6 +691,7 @@ class Parametrized(Shape):
         """
         # TODO delta_t modif
         # TODO other modifs with constructor?
+        # TODO: tres/tp/ns
 
         # set attribute value
         Pulse.__setattr__(self, name, value)
