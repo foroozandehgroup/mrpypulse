@@ -65,11 +65,26 @@ def test_pulse_setattr():
     p2.w1 = np.random.uniform(low=0.1, high=3)
     p1.r = p2.w1 * p1.r / np.max(p1.r)
     assert p1==p2
+    
+    # assert start, end and t change
+    position_shift = np.random.randint(1,1000)*p1.tres
+    p1.start = p1.start + position_shift
+    p2.end = p2.end + position_shift
+    assert np.allclose(p1.t, p2.t, rtol=1e-6, atol=1e-12)
+    assert np.isclose(p1.start, p2.start, rtol=1e-6, atol=1e-12)
+    assert np.isclose(p1.end, p2.end, rtol=1e-6, atol=1e-12)
+    p1.t -= position_shift
+    p2.start -= position_shift
+    assert np.allclose(p1.t, p2.t, rtol=1e-6, atol=1e-12)
+    assert np.isclose(p1.start, p2.start, rtol=1e-6, atol=1e-12)
+    assert np.isclose(p1.end, p2.end, rtol=1e-6, atol=1e-12)
 
-    # assert change of coordinates
+    # assert change of coordinates (x, y, r, ph)
     p1.x = p1.x * np.random.uniform(low=-1, high=1)
     p1.y = p1.y * np.random.uniform(low=-1, high=1)
     assert p1!=p2
     p1.r = p2.r
     p1.ph = p2.ph
     assert p1==p2
+    
+    

@@ -3,7 +3,6 @@
 import numpy as np
 import scipy.interpolate
 import matplotlib.pyplot as plt
-import copy
 
 
 class Pulse:
@@ -107,38 +106,73 @@ class Pulse:
     def __setattr__(self, name, value):
         """
         Handles multiple attributes modification when one attribute is modified
-        In particular, called in __init__
-        """        
+        
+        
+        Set up the attribute identified by name with value. Attributes which 
+        causes other modifications:
+        r or ph:
+            x, y, w1 update
+        x or y:
+            r, ph, w1 update
+        w1:
+            scale coordinates x, y, and r
+        phi0:
+            phi0 also added to ph
+        start, end :
+            pulse position changed (start/end/t updated)
+        t:
+            needs to be compatible with pulse duration and number of points
+        
+        Particular conditions are set up to take into account the calls made in
+        __init__
+        """
+        
+        # already initialized special cases
         if name == 'w1' and hasattr(self, 'w1'):
-            # w1 already initialized: scale coordinates (calls __setattr__ recursively)
+            # scale coordinates (calls __setattr__ recursively)
             self.r = value * self.r/max(self.r)     
         elif name == 'phi0' and hasattr(self, 'phi0'):
-            # phi0 already initialized: reset phi0 on ph
+            # reset phi0 on ph
             object.__setattr__(self, 'ph', self.ph - self.phi0)
+           
+        elif name == 'start' and hasattr(self, 'start'):
+            object.__setattr__(self, 'end', value + self.tp)
+            object.__setattr__(self, 't', np.linspace(value+self.tres/2, self.end-self.tres/2, self.ns))
+        
+        elif name == 'end' and hasattr(self, 'end'):
+            object.__setattr__(self, 'start', value - self.tp)
+            object.__setattr__(self, 't', np.linspace(self.start+self.tres/2, value-self.tres/2, self.ns))
+            
+        elif name == 't' and hasattr(self, 't'):
+            object.__setattr__(self, 'start', value[0] - self.tres/2)
+            object.__setattr__(self, 'end', value[-1] + self.tres/2)
+            if np.isclose(value[-1] - value[0], self.tp, rtol=1e-6, atol=1e-15):
+                raise ValueError('Vector t not compatible with tp.')
+            if value != self.ns:
+                raise ValueError('t should has a different number of point.')
 
         # TODO tres/ns/tp modification and how they would affect each other
         # e.g.
         #   - tres -> modif np [requires interpolation]?
-        #   - tp -> lower tres and no ns modif?
+        #   - tp -> lower tres and no ns modif? +modify t/end
         #   - ns -> modif tres?
 
         # set attribute value
         object.__setattr__(self, name, value)
 
         if (name == 'ph' or name == 'r') and hasattr(self, 'r') and hasattr(self, 'ph'):
-            # r or ph: x, y, w1 update
             object.__setattr__(self, 'x', self.r * np.cos(self.ph))
             object.__setattr__(self, 'y', self.r * np.sin(self.ph))
             if hasattr(self, 'w1'):
                 object.__setattr__(self, 'w1', np.max(self.r))
+        
         elif (name == 'x' or name == 'y') and hasattr(self, 'x') and hasattr(self, 'y'):
-            # x or y: r, ph, w1 update
             object.__setattr__(self, 'r', np.sqrt(self.x**2 + self.y**2))
             object.__setattr__(self, 'ph', np.arctan2(self.y, self.x))
             if hasattr(self, 'w1'):
                 object.__setattr__(self, 'w1', np.max(self.r))
+        
         elif name == 'phi0' and hasattr(self, 'phi0') and hasattr(self, 'ph'):
-            # phi0: add phase offset to phase
             self.ph = self.ph + self.phi0 # calls __setattr__ recursively
 
     def __radd__(self, pulse2add):
@@ -162,7 +196,7 @@ class Pulse:
         """
         # TODO testing
         # TODO __rsub__
-        if self.tres != pulse2add.tres:
+        if  not np.isclose(self.tres, pulse2add.tres, rtol=1e-6, atol=1e-12):
             raise ValueError('Pulses can only be added if their tres is the same.')
 
         # initialization
@@ -214,7 +248,7 @@ class Pulse:
 
     def __ne__(self, p):
         """
-        negation of __eq__ (cf __eq__ for more information)
+        Negation of __eq__ (cf __eq__ for more information)
         """
         return not self.__eq__(p)
 
@@ -223,12 +257,12 @@ class Pulse:
         Convert pulse object to string (typically used by print)
         """
         
-        Pulsestr = 'Pulse object with the following attributes\n'
+        pulsestr = 'Pulse object with the following attributes\n'
         
         if hasattr(self, 'ID'):
-            Pulsestr += f'ID:    {self.ID}\n'
+            pulsestr += f'ID:    {self.ID}\n'
             
-        Pulsestr += (f'tp:    {self.tp}\n'
+        pulsestr += (f'tp:    {self.tp}\n'
                      f'ns:    {self.ns}\n'
                      f'tres:  {self.tres}\n'
                      f'start: {self.start}\n'
@@ -240,7 +274,7 @@ class Pulse:
                      f'r:     [{self.r[0]} ... {self.r[-1]}]\n'
                      f'ph:    [{self.ph[0]} ... {self.ph[-1]}]\n')
             
-        return Pulsestr
+        return pulsestr
 
     def plot(self, form:str = "Cartesian", label:bool = True, title:str = None):
         """
