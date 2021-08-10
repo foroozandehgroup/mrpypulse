@@ -6,8 +6,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 plt.style.use('seaborn-deep')
 
-# TODO this module
-
 def simulate(pulses, off, time=None, B1=None, use_pc=False, magn_init=None):
     """
     Simulation of the magnetization
@@ -42,7 +40,7 @@ def magnetisations(pulses, delta_F, nspins):
     pulses: list of pulses
         pulses to be applied to magnetization
     delta_F: float
-        Spectral width in Hz
+        Offsets. Can be specified either as an array of offsets or as a spectral bandwidth in Hz.
     nspins: int
         Number of spins
         
@@ -67,7 +65,6 @@ def magnetisations(pulses, delta_F, nspins):
     offsets: ndarray
         ndarray containing offsets for which the values are calculated
         
-    TODO use Rodrigues matrix for simulation
     """
     # Phase cycling
     # TODO: should be input by the user if he wants to use phase cyclign
@@ -76,7 +73,12 @@ def magnetisations(pulses, delta_F, nspins):
     npc = len(ph1)
 
     # TODO: the user should input the offsets directly
-    offsets = np.linspace(-0.75*delta_F, 0.75*delta_F, nspins)
+    if type(delta_F) == float:
+        offsets = np.linspace(-0.75*delta_F, 0.75*delta_F, nspins)
+    elif type(delta_F) == np.ndarray:
+        offsets = delta_F
+    elif type(delta_F) == list:
+        offsets = np.array(delta_F)
     
     magnetisations = np.zeros((3, nspins, npc))
 
@@ -231,123 +233,232 @@ def excitation_profile(pulses, delta_F, nspins):
     plt.xlabel("Offset / kHz")
     plt.tight_layout()
 
-    # TODO: move the follwing somewhere else (not an excitation profile)
-    # Plot phase variation with B1
-    # phase variation plotted vs offset
-    # plt.figure('B1 phase variation')
-    # z, phi = B1_phase_variance(pulse, timestep, delta_F, max_rf_amp, nspins, N)
+    return None 
+    
 
-    # plt.plot(z, phi, 'k')
-    # plt.xlabel(r'$\frac{B_1}{B_1^0}$')
-    # plt.ylabel(r'$\frac{d\phi}{dB_1}$')
-    # plt.title('Variation of phase across B1 frequencies')
+def B1_variability(pulse, timestep, delta_F, max_rf_amp, nspins, N):
+    '''
+    This function plots the variability of the phase gainst B1 of the pulse. 
 
-    # plt.show()
-    return None # TODO: determine no return is better
-    
-    
-def Rx(theta):
-    """
-    Function to calculate the rotation by an angle theta around the x axis
-    
+    To prevent confusion of inputs and best results this should be called straight after the optimised pulse has been created,
+    and from within the same script. 
+
     Parameters
     ----------
-    theta: float or ndarray
-        The angle(s) of rotation around the x axis (rad)
+    Pulse: ndarray
+        numpy array containing the control amplitudes (x_controls, y_controls). (1, 2N) array
+    timestep: float
+        Time of each pulse segment in seconds
+    delta_F: float
+        Spectral width in Hz
+    max_rf_amp: float
+        The power of the RF pulse in Hz
+    nspins: int
+        Number of spins
+    N: int
+        Number of pulse segments
+    '''
+    #Plot phase variation with B1
+    plt.figure('B1 phase variation')
+    z, phi = B1_phase_variance(pulse, timestep, delta_F, max_rf_amp, nspins, N)
+
+    plt.plot(z, phi, 'k')
+    plt.xlabel(r'$\frac{B_1}{B_1^0}$')
+    plt.ylabel(r'$\frac{d\phi}{dB_1}$')
+    plt.title('Variation of phase across B1 frequencies')
     
-    Returns
+    return None
+
+
+
+def mvdot(matrix, vector):
+    '''
+    Matrix-vector multiplication rewritten for a column-flattened matrix
+    and a row vector.
+
+    Parameters
+    ----------
+    matrix: ndarray
+        Column-flattened 3x3 matrix
+    vector: ndarray
+        Row vector
+
+    Return
     ------
-    Rx: ndarray
-        numpy array of the rotation matrix
-    """
-    cos = np.cos(theta)
-    sin = np.sin(theta)
-
-    m1 = np.stack((1, 0, 0), axis=0)
-    m2 = np.stack((0, cos, sin), axis=0)
-    m3 = np.stack((0, sin, cos), axis=0)
-
-    return np.stack((m1, m2, m3), axis=0)
-
-
-def Ry(theta):
-    """
-    Function to calculate the rotation by an angle theta around the y axis
-    Parameters
-    ----------
-    theta: float or ndarray
-        angle(s) of rotation around the y axis (rad)
+    result: ndarray
+        Product of the multiplication as a row vector.
+    '''
     
-    Returns
-    -------
-    Ry: ndarray
-        numpy array of the rotation matrix
-    """
-    cos = np.cos(theta)
-    sin = np.sin(theta)
+    if matrix.ndim == 1:
+        matrix = matrix.reshape((1, -1))
 
-    m1 = np.stack((cos, 0, sin), axis=0)
-    m2 = np.stack((0, 1, 0), axis=0)
-    m3 = np.stack((-sin, 0, cos), axis=0)
+    if vector.size == 3 and matrix.size == 9:
+        result = np.zeros(3)
+        result[0] = ((matrix[:,0] * vector[0]) + 
+                    (matrix[:,3] * vector[1]) + 
+                    (matrix[:,6] * vector[2]))
 
-    return np.stack((m1, m2, m3), axis=0)
+        result[1] = ((matrix[:,1] * vector[0]) + 
+                    (matrix[:,4] * vector[1]) + 
+                    (matrix[:,7] * vector[2]))
 
+        result[2] = ((matrix[:,2] * vector[0]) + 
+                    (matrix[:,5] * vector[1]) + 
+                    (matrix[:,8] * vector[2]))
 
+    else:
+        result = np.zeros((np.size(vector, axis=0)))
+        result[:,0] = ((matrix[:,0] * vector[:,0]) + 
+                    (matrix[:,3] * vector[:,1]) + 
+                    (matrix[:,6] * vector[:,2]))
+
+        result[:,1] = ((matrix[:,1] * vector[:,0]) + 
+                    (matrix[:,4] * vector[:,1]) + 
+                    (matrix[:,7] * vector[:,2]))
+
+        result[:,2] = ((matrix[:,2] * vector[:,0]) + 
+                    (matrix[:,5] * vector[:,1]) + 
+                    (matrix[:,8] * vector[:,2]))
+
+    return result
+
+    
+    
 def Rz(theta):
-    """
-    Function to calculate the rotation by an angle theta around the z axis
-    
+    '''
+    Function to calculate the rotation by an angle theta around the z axis.
+    The rotation matrix is returned as a column flattened vector.
+
     Parameters
     ----------
     theta: float or ndarray
-        angle(s) of rotation around the z axis (rad)
-    
-    Returns
-    -------
+        The angle(s) of rotation around the z axis
+
+    Return
+    ------
     Rz: ndarray
         numpy array of the rotation matrix
-    """
+
+    '''
     cos = np.cos(theta)
     sin = np.sin(theta)
 
-    m1 = np.stack((cos, -sin, 0), axis=0)
-    m2 = np.stack((sin, cos, 0), axis=0)
-    m3 = np.stack((0, 0, 1), axis=0)
-    return np.stack((m1, m2, m3), axis=0)
+    rz = [cos, -sin, 0, sin, cos, 0, 0, 0, 1]
+    return np.array([rz])
 
 
 def Rtot(omega, offsets, phi, delta_time):
-    """
-    Function to calculate the total rotation.
-    
-    Parameters
-    ----------
-    omega: float 
-        amplitude (Hz)
-    offsets: float
-        offset frequency of the spin (Hz)
-    phi: float or ndarray
-        phase of pulse point (rad)
-    delta_time: float
-        timestep (s)
-    
-    Returns
-    -------
-    rtot: ndarray
-        numpy array of the rotation matrix
-    """
+        '''
+        Function to calculate the total rotation using the Rodrigues rotation formula. 
+        Rotation around the effective magnetic field by the flip angle beta.
+        Each rotation matrix is returned as a column flattened vector.
 
-    omega_eff = np.sqrt((2 * np.pi * omega)**2       # Angular frequency of the
+        Parameters
+        ----------
+        omega: float 
+            RF amplitude
+        offsets: float
+            Offset frequency of the spin
+        phi: float or ndarray
+            Phase of pulse point
+        delta_time: float
+            Timestep
+
+        Return
+        ------
+        rtot: ndarray
+            numpy array of the rotation matrix
+        '''
+
+        if type(phi) == np.ndarray:
+            omega_eff = np.zeros((len(omega), 2))
+            omega_eff[:,0] = omega.reshape((-1,))
+            omega_eff[:,1] = offsets
+            omega_eff = np.linalg.norm(omega_eff * 2 * np.pi, axis=1) # effective field Beff
+
+            theta = np.arctan2(omega, offsets) #Angle between B1 and Beff
+            beta = delta_time * omega_eff #Flip angle
+            beta = beta.reshape((-1, 1))
+
+            phi_col = phi.reshape((-1,))
+            N = len(phi)
+            Beff = np.zeros((N,3))
+            K = np.zeros((N, 9)) 
+            K2 = np.zeros((N, 9))
+            identity = np.eye(3).reshape((1, -1), order='F')
+            Beff[:,0] = np.sin(theta) * np.cos(phi_col) 
+            Beff[:,1] = np.sin(theta) * np.sin(phi_col)
+            Beff[:,2] = np.cos(theta)
+
+            Beff = Beff / np.linalg.norm(Beff, axis=1).reshape((-1,1))
+
+            Beff2 = Beff ** 2 
+            Beffxy = Beff[:,0] * Beff[:,1]
+            Beffyz = Beff[:,1] * Beff[:,2]
+            Beffzx = Beff[:,2] * Beff[:,0]
+
+            K[:,0] = 0
+            K[:,1] = Beff[:,2]
+            K[:,2] = -Beff[:,1]
+            K[:,3] = -Beff[:,2]
+            K[:,4] = 0
+            K[:,5] = Beff[:,0]
+            K[:,6] = Beff[:,1]
+            K[:,7] = -Beff[:,0]
+            K[:,8] = 0
+            K2[:,0] = -Beff2[:,2] - Beff2[:,1]
+            K2[:,1] = Beffxy
+            K2[:,2] = Beffzx
+            K2[:,3] = Beffxy
+            K2[:,4] = -Beff2[:,2] - Beff2[:,0]
+            K2[:,5] = Beffyz
+            K2[:,6] = Beffzx
+            K2[:,7] = Beffyz
+            K2[:,8] = -Beff2[:,1] - Beff2[:,0]
+
+            rtot = identity + (np.sin(beta) * K) + ((1 - np.cos(beta)) * K2)
+        
+        else:
+
+            omega_eff = np.sqrt((2 * np.pi * omega)**2       # Angular frequency of the
                         + (2 * np.pi * offsets)**2)  # effective field Beff
+            theta = np.arctan2(omega, offsets) #Angle between B1 and Beff
+            beta = delta_time * omega_eff #Flip angle
+            
+            Beff = np.zeros(3)
+            K = np.zeros(9)
+            K2 = np.zeros(9)
+            identity = np.eye(3).reshape((1, -1), order='F')
+            Beff[0] = np.sin(theta) * np.cos(phi) 
+            Beff[1] = np.sin(theta) * np.sin(phi)
+            Beff[2] = np.cos(theta)
 
-    theta = np.arctan2(omega, offsets) # Angle between B1 and Beff
-    beta = delta_time * omega_eff      # Flip angle
+            Beff = Beff / np.linalg.norm(Beff)
 
-    if type(phi)==np.ndarray:
-        rtot = np.einsum('ijh,jkh,klh,lmh,mnh->inh',
-                          Rz(phi), Ry(theta), Rz(beta), Ry(-theta), Rz(-phi))
-    else:
-        rtot = Rz(phi).dot(Ry(theta).dot(Rz(beta).dot(Ry(-theta).dot(Rz(-phi)))))
-    
-    return rtot
+            Beff2 = Beff ** 2 
+            Beffxy = Beff[0] * Beff[1]
+            Beffyz = Beff[1] * Beff[2]
+            Beffzx = Beff[2] * Beff[0]
 
+            K[0] = 0
+            K[1] = Beff[2]
+            K[2] = -Beff[1]
+            K[3] = -Beff[2]
+            K[4] = 0
+            K[5] = Beff[0]
+            K[6] = Beff[1]
+            K[7] = -Beff[0]
+            K[8] = 0
+            K2[0] = -Beff2[2] - Beff2[1]
+            K2[1] = Beffxy
+            K2[2] = Beffzx
+            K2[3] = Beffxy
+            K2[4] = -Beff2[2] - Beff2[0]
+            K2[5] = Beffyz
+            K2[6] = Beffzx
+            K2[7] = Beffyz
+            K2[8] = -Beff2[1] - Beff2[0]
+
+            rtot = identity + (np.sin(beta) * K) + ((1 - np.cos(beta)) * K2)
+
+        return rtot
