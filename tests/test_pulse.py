@@ -94,12 +94,20 @@ def test_pulse_radd():
     p1 = random_pulse()
     p2 = copy.deepcopy(p1)
     p3 = p1 + p2
-    print(p1)
-    print(p3)
     assert np.allclose(p3.x, p1.x+p2.x, rtol=1e-6, atol=1e-15)
     assert not np.isclose(p3.w1, p1.w1, rtol=1e-6, atol=1e-15)
     p1 += p2
     assert p1 == p3
+
+
+def test_pulse_add_ph_polyfit():
+    p1 = random_pulse()
+    p2 = copy.deepcopy(p1)
+    scale_ph = 2*np.random.rand()
+    ph = np.random.uniform(low=-1.0, high=1.0, size=int(scale_ph * p1.ns))
+    ph_corr = p1.add_ph_polyfit(ph)
+    p2.ph += ph_corr
+    assert p1 == p2
 
 
 def test_parametrized_init():

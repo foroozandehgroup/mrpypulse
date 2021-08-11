@@ -83,17 +83,12 @@ class Pulse:
         elif ns is None and tp is not None and tres is not None:
             self.tp = tp
             ns = tp/tres
-            self.ns = int(ns)
-            # if np.modf(ns)[0] > 0.99999:  # account for float type operations
-            #     self.ns = int(np.ceil(ns))
-            # else:
-            #     self.ns = int(np.floor(ns))
+            # self.ns = int(ns)
+            if np.modf(ns)[0] > 0.99999:  # account for float type operations
+                self.ns = int(np.ceil(ns))
+            else:
+                self.ns = int(np.floor(ns))
             self.tres = tp / self.ns  # tres adjusted for the rouding on ns
-
-            print('oklm')
-            print(tp/tres)
-            print(self.ns)
-
         else:
             raise TypeError('Exactly 2 of tp, np and tres should be used.')
         self.phi0 = phi0
@@ -108,10 +103,6 @@ class Pulse:
         if hasattr(self, 'r'):
 
             if len(self.r) != self.ns:
-                print('   ')
-                print(tp/tres)
-                print(self.ns)
-                print(len(self.r))
                 raise ValueError(
                     'Pulse coordinates length and ns do no match.')
             self.w1 = np.max(self.r)
@@ -312,6 +303,55 @@ class Pulse:
                      f'ph:      [{self.ph[0]} ... {self.ph[-1]}]\n')
 
         return pulsestr
+
+    def add_ph_polyfit(self, ph, start=0, end=100, deg=5, plot=False):
+        """
+        Add the polynomial fitting of a phase vaector to the phase of the pulse
+
+        Parameters
+        ----------
+        ph: numpy array of floats
+            phase to add
+        start: float
+            start of the polynomial fit (%)
+        end: float
+            stop of the polynomial fit (%)
+        deg: int
+            degree of the polynomial fit
+        plot: boolean
+            allows to plot ph, its fit and the phase correction
+
+        plt.show() might be needed calling the function to reveal the plots.
+
+        """
+        if start > end:
+            raise ValueError('end should be superior to start')
+
+        # select ph between start and end
+        i_start = int(round(len(ph) * start / 100))
+        i_end = int(round(len(ph) * end / 100))
+        ph2fit = ph[i_start:i_end]
+
+        # fit applied on selection
+        x_ph2fit = np.arange(i_start, i_end)
+        poly = np.polyfit(x_ph2fit, ph2fit, deg)
+        fit = np.polyval(poly, x_ph2fit)
+
+        # compute phase correction over all pulse
+        x_ph_corr = np.arange(0, len(self.ph))
+        ph_corr = np.polyval(poly, x_ph_corr)
+
+        # apply phase correction
+        self.ph += ph_corr
+
+        if plot:
+            plt.figure()
+            plt.plot(x_ph2fit, ph2fit, x_ph2fit, fit, "r")
+
+            plt.figure()
+            plt.plot(x_ph_corr, ph_corr)
+
+        return ph_corr
 
     def plot(self,
              form: str = "Cartesian", label: bool = True, title: str = None):
@@ -740,6 +780,40 @@ class Parametrized(Shape):
         Convert parametrized object to string (typically used by print)
         """
         parametrized_str = super().__str__()
+
+        if hasattr(self, 'FM'):
+            parametrized_str += (f'delta_f: {self.delta_f}\n'
+                                 f'Q:       {self.Q}\n')
+
+        if hasattr(self, 'n'):
+            parametrized_str += f'n:       {self.n}\n'
+        if hasattr(self, 'sm'):
+            parametrized_str += f'sm:      {self.sm}\n'
+        if hasattr(self, 'B'):
+            parametrized_str += f'B:       {self.B}\n'
+
+        return parametrized_str
+
+    def add_ph_polyfit(self, ph, start=None, end=None, deg=5, plot=False):
+        """
+        Parameters
+        ----------
+        """
+
+        if start is None:
+            if hasattr(self, 'sm'):
+                start = self.sm
+            else:
+                start = 0
+
+        if end is None:
+            if hasattr(self, 'sm'):
+                end = 100 - self.sm
+            else:
+                end = 100
+
+        self.add_ph_polyfit(self, ph, start=start, end=end, deg=deg, plot=plot)
+
 
         if hasattr(self, 'FM'):
             parametrized_str += (f'delta_f: {self.delta_f}\n'
