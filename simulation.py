@@ -344,7 +344,8 @@ def Rz(theta):
     sin = np.sin(theta)
 
     rz = [cos, -sin, 0, sin, cos, 0, 0, 0, 1]
-    return np.array([rz])
+    
+    return np.reshape(np.array([rz]), (3,3))
 
 
 def Rtot(omega, offsets, phi, delta_time):
@@ -461,4 +462,4 @@ def Rtot(omega, offsets, phi, delta_time):
 
             rtot = identity + (np.sin(beta) * K) + ((1 - np.cos(beta)) * K2)
 
-        return rtot
+        return np.reshape(rtot, (3,3))
