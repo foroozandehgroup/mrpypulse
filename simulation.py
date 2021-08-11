@@ -6,31 +6,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 plt.style.use('seaborn-deep')
 
-def simulate(pulses, off, time=None, B1=None, use_pc=False, magn_init=None):
-    """
-    Simulation of the magnetization
-    
-    Parameters
-    ----------
-    pulses: list of pulse objects
-        pulses to be simulated
-    off: numpy array of floats
-        offsets
-    time: float
-        time of the simulation
-    """
-    if time is None:
-        time = np.max(p.end for p in pulses)
-    # TODO code method/insert somwhere else
-    # loop over phase cycling
-    #   loop over offsets
-    #       loop over B1
-    #           loop over pulses
-    #   phase cycling avg
-    # return magn
 
-
-def magnetisations(pulses, delta_F, nspins):
+def simulate(pulses, offsets=None):
     """
     Calculation of the magnetisations Ix, Iy, and Iz along with the phase across a given 
     spectral width.
@@ -39,12 +16,12 @@ def magnetisations(pulses, delta_F, nspins):
     ----------
     pulses: list of pulses
         pulses to be applied to magnetization
-    delta_F: float
-        Offsets. Can be specified either as an array of offsets or as a spectral bandwidth in Hz.
-    nspins: int
-        Number of spins
+    offsets: numpy array of floats
+        list of offsets at which to perform the simulation
         
     # TODO: additional parameters
+    nspins:
+        if offsets=None
     B1: numpy array of floats
         B1 values to simulation
     pc: numpy array of floats
@@ -54,17 +31,8 @@ def magnetisations(pulses, delta_F, nspins):
     
     Returns
     -------
-    Ix: ndarray
-        ndarray containing the Ix magnetisation across the spectral width
-    Iy: ndarray
-        ndarray containing the Iy magnetisation across the spectral width
-    Iz: ndarray
-        ndarray containing the Iz magnetisation across the spectral width
-    phase: ndarray
-        ndarray containing the phase across the spectral width
-    offsets: ndarray
-        ndarray containing offsets for which the values are calculated
-        
+    magn: ndarray
+        ndarray containing the magnetisation across the spectral width        
     """
     # Phase cycling
     # TODO: should be input by the user if he wants to use phase cyclign
@@ -72,15 +40,11 @@ def magnetisations(pulses, delta_F, nspins):
     ph31 = [0]
     npc = len(ph1)
 
-    # TODO: the user should input the offsets directly
-    if type(delta_F) == float:
-        offsets = np.linspace(-0.75*delta_F, 0.75*delta_F, nspins)
-    elif type(delta_F) == np.ndarray:
-        offsets = delta_F
-    elif type(delta_F) == list:
-        offsets = np.array(delta_F)
+    if offsets is None:
+        limit = 0.75*pulses[0].bw
+        offsets = np.linspace(-limit, limit, 100)
     
-    magnetisations = np.zeros((3, nspins, npc))
+    magn = np.zeros((3, len(offsets), npc))
 
     for phase in range(npc):
         for o in range(len(offsets)):
@@ -96,16 +60,27 @@ def magnetisations(pulses, delta_F, nspins):
                     R_phi = ph1[phase] + p.ph[i]
                     M = np.dot(Rtot(p.r[i], offsets[o], R_phi, p.tres), M)
             receiver = receiver + np.dot(Rz((-np.pi/180) * ph31[phase]), M)
-            magnetisations[:, o, phase] = receiver
+            magn[:, o, phase] = receiver
 
-    Ix = magnetisations[0,:]
-    Iy = magnetisations[1,:]
-    Iz = magnetisations[2,:]
-    Ixy = np.sqrt(Ix**2 + Iy**2)
-    phase = np.angle(Iy + 1j * Ix) / np.pi
+    return magn, offsets
 
-    # TODO: only return one magnetization array (other function for phase/Ixy)
-    return Ix, Iy, Iz, Ixy, phase, offsets
+
+def magn_phase(magn):
+    """
+    Compute the phase of the magnetisation
+    
+    Parameters
+    ----------
+    magn: numpy array of floats
+    
+    Returns
+    -------
+    phase: 1D numpy array of floats
+        phase of the magnetisation
+    
+    # TODO non 1D case
+    """
+    return np.angle(magn[0,:] + 1j * magn[1,:]) / np.pi
 
 
 def B1_phase_variance(pulse, timestep, delta_F, max_rf_amp, nspins, N):
@@ -182,9 +157,9 @@ def B1_phase_variance(pulse, timestep, delta_F, max_rf_amp, nspins, N):
     return z, phi
 
 
-def excitation_profile(pulses, delta_F, nspins):
+def plot_magn(magn, offsets):
     """
-    Calculates and plot the excitaton profile of the pulse.
+    Plot the magnetization.
     
     To prevent confusion of inputs and best results this should be called straight after the optimised pulse has been created,
     and from within the same script.
@@ -193,30 +168,32 @@ def excitation_profile(pulses, delta_F, nspins):
     
     Parameters
     ----------
-    Pulse: list of pulses
-        pulses to simulate
-    delta_F: float
-        Spectral width in Hz
-    nspins: int
-        Number of spins
+    magn: numpy array of floats
+        magnetization to plot
+    offsets: numpy array of floats
+        magnetization offsets to plot
         
     Plot over the desired bandwith the Ix, Iy, Iz, Ixy.
     
     """
-    
-    #Set figure parameters
+
+    # set figure parameters
     mpl.rcParams['axes.spines.right'] = False
     mpl.rcParams['axes.spines.top'] = False
     mpl.rcParams['xtick.top'] = False
     mpl.rcParams['ytick.right'] = False    
 
-    #Plot magnetisations against offset
+    # plot magnetisations against offset
     plt.figure('Magnetisations vs offset')
-    Ix, Iy, Iz, Ixy, phase, offsets = magnetisations(pulses, delta_F, nspins)
+
+    Ix = magn[0,:]
+    Iy = magn[1,:]
+    Iz = magn[2,:]
+    Ixy = np.sqrt(Ix**2 + Iy**2)
+    phase = np.angle(Iy + 1j * Ix) / np.pi
 
     display = {"Ix": Ix, "Iy": Iy, "Iz": Iz, "Ixy":Ixy, "Phase":phase}
-    
-    offsets = offsets * 1e-3
+
     nb_subplot = 1
 
     c = ['k', 'm', 'c', 'y', 'r']
@@ -230,7 +207,7 @@ def excitation_profile(pulses, delta_F, nspins):
         plt.ylabel(key)
         nb_subplot += 1
 
-    plt.xlabel("Offset / kHz")
+    plt.xlabel("Offset")
     plt.tight_layout()
 
     return None 
