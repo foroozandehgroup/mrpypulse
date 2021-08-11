@@ -812,21 +812,11 @@ class Parametrized(Shape):
             else:
                 end = 100
 
-        self.add_ph_polyfit(self, ph, start=start, end=end, deg=deg, plot=plot)
+        ph_corr = super().add_ph_polyfit(ph, 
+                                      start=start, end=end, deg=deg, 
+                                      plot=plot)
 
-
-        if hasattr(self, 'FM'):
-            parametrized_str += (f'delta_f: {self.delta_f}\n'
-                                 f'Q:       {self.Q}\n')
-
-        if hasattr(self, 'n'):
-            parametrized_str += f'n:       {self.n}\n'
-        if hasattr(self, 'sm'):
-            parametrized_str += f'sm:      {self.sm}\n'
-        if hasattr(self, 'B'):
-            parametrized_str += f'B:       {self.B}\n'
-
-        return parametrized_str
+        return ph_corr
 
 
 class OCT(Shape):

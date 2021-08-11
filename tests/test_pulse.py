@@ -138,3 +138,15 @@ def test_parametrized_reverse_sweep():
     assert not np.allclose(p1.ph, -p2.ph, rtol=1e-6, atol=1e-15)
     p1.reverse_sweep()
     assert p1 == p2
+    
+def test_parametrized_add_ph_polyfit():
+    (am, fm, tres, tp, Q, bw) = \
+        ("sinsmoothed", "chirp", 0.5e-6, 500e-6, 5, 300e3)
+    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tres)
+    p2 = copy.deepcopy(p1)
+
+    ns_ph = np.random.randint(20, 1000)
+    ph = np.random.uniform(low=-1.0, high=1.0, size=ns_ph)
+    ph_corr = p1.add_ph_polyfit(ph)
+    p2.ph += ph_corr
+    assert p1 == p2
