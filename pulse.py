@@ -211,6 +211,7 @@ class Pulse:
         """
         # TODO testing
         # TODO __rsub__
+        
         if not np.isclose(self.tres, pulse2add.tres, rtol=1e-6, atol=1e-12):
             raise ValueError(
                 'Pulses can only be added if their tres is the same.')
@@ -245,16 +246,35 @@ class Pulse:
 
             if self.start < t[i] < self.end:
                 x[i] += self.x[j]
+                y[i] += self.y[j]
                 j += 1
 
             if pulse2add.start < t[i] < pulse2add.end:
                 x[i] += pulse2add.x[k]
+                y[i] += pulse2add.y[k]
                 k += 1
 
         pulse_sum = Pulse(
             ns=ns, tp=tp, x=np.array(x), y=np.array(y), start=start)
 
         return pulse_sum
+
+    def __radd__(self, object2add):
+        """
+        Pulse add for non-pulses objects
+        
+        Parameters
+        ----------
+        object2add: object
+            non-pulse object to add
+        Returns
+            self if the object is 0 (allows to use sum on an list of pulses)
+        """
+        if object2add == 0:
+            return self
+        else:
+            raise ValueError('A pulse object should be added '
+                             'to a pulse object.')
 
     def __eq__(self, p):
         """
@@ -337,9 +357,9 @@ class Pulse:
         poly = np.polyfit(x_ph2fit, ph2fit, deg)
         fit = np.polyval(poly, x_ph2fit)
 
-        # compute phase correction over all pulse
-        x_ph_corr = np.arange(0, len(self.ph))
-        ph_corr = np.polyval(poly, x_ph_corr)
+        # compute phase correction over whole pulse
+        x_ph_corr = np.linspace(1, len(ph), self.ns)
+        ph_corr = np.polyval(poly, x_ph_corr)     
 
         # apply phase correction
         self.ph += ph_corr
