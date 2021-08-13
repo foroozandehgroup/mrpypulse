@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-deep')
 
 
-def simulate(pulses, offsets=None):
+def simulate(pulses, offsets=None, tend=None, pc=None):
     """
     Calculation of the magnetisations Ix, Iy, and Iz along with the phase across a given 
     spectral width.
@@ -35,32 +35,148 @@ def simulate(pulses, offsets=None):
         ndarray containing the magnetisation across the spectral width        
     """
     # Phase cycling
-    # TODO: should be input by the user if he wants to use phase cyclign
-    ph1 = [0]
-    ph31 = [0]
-    npc = len(ph1)
+    # TODO: should be input by the user if he wants to use phase cycling
+
 
     if offsets is None:
         limit = 0.75*pulses[0].bw
         offsets = np.linspace(-limit, limit, 100)
+        
+    if tend is None:
+        tend = pulses[-1].end
+        
+    if pc is None:
+        pc = np.zeros((len(pulses)+1, 1))
+    
+    npc = pc.shape[1]
+    noff = len(offsets)
     
     magn = np.zeros((3, len(offsets), npc))
 
     for phase in range(npc):
-        for o in range(len(offsets)):
-            receiver = np.array([0, 0, 0])
+        for o in range(noff):
+            #receiver = np.array([0, 0, 0])
             
-            # TODO: add option to start differently
-            M = np.array([0, 0, 1]) # Magnetisation starts as z-magnetisation
+            # TODO: add option to start with different magentization vector
+            M = np.array([0, 0, 1]) # default: magnetization on z
+            
+            # potential delay before first pulse
+            if pulses[0].start > 0:
+                M = np.dot(rz0(2 * np.pi * offsets[o] * pulses[0].start), M)
             
             # TODO loop over pulses and take delays into account
-            for p in pulses:
-                for i in range(p.ns):
+            
+            for i, p in enumerate(pulses):
+                # if offsets[o]==0:
+                #     print(pc[i,phase])
+                
+                
+                p_rtot = rtot0(p.r, offsets[o], pc[i,phase] + p.ph, p.tres)
+                for j in range(p.ns):
                     #R_phi = np.pi * (ph1[phase] + p.ph[i]) / 180
-                    R_phi = ph1[phase] + p.ph[i]
-                    M = np.dot(Rtot(p.r[i], offsets[o], R_phi, p.tres), M)
-            receiver = receiver + np.dot(Rz((-np.pi/180) * ph31[phase]), M)
-            magn[:, o, phase] = receiver
+                    #R_phi = 
+                    #M = np.dot(Rtot(p.r[j], offsets[o], R_phi, p.tres), M)
+                    
+                    M = np.dot(p_rtot[:,:,j],M)
+                    
+                # potential delay between pulses
+                if i < len(pulses) - 1:
+                    
+                    if p.end < pulses[i+1].start: # TODO np.isclose
+                        M = np.dot(rz0(2 * np.pi * offsets[o] * (pulses[i+1].start-p.end)), M)
+
+            # potential delay after last pulse
+            if pulses[-1].end < tend:
+                M = np.dot(rz0(2 * np.pi * offsets[o] * (tend - pulses[-1].end)), M)
+
+            #receiver = receiver + 
+            magn[:, o, phase] = np.dot(rz0(-pc[-1,phase]), M)
+            
+    magn = np.sum(magn, axis=2) / npc # phase cycling collapse
+
+    return magn, offsets
+
+
+def simulate2(pulses, offsets=None, tend=None, pc=None):
+    """
+    Calculation of the magnetisations Ix, Iy, and Iz along with the phase across a given 
+    spectral width.
+    
+    Parameters
+    ----------
+    pulses: list of pulses
+        pulses to be applied to magnetization
+    offsets: numpy array of floats
+        list of offsets at which to perform the simulation
+        
+    # TODO: additional parameters
+    nspins:
+        if offsets=None
+    B1: numpy array of floats
+        B1 values to simulation
+    pc: numpy array of floats
+        phase cycling to be used on pulses
+    magn_init: numpy array of floats
+        initial magnetization
+    
+    Returns
+    -------
+    magn: ndarray
+        ndarray containing the magnetisation across the spectral width        
+    """
+    # Phase cycling
+    # TODO: should be input by the user if he wants to use phase cycling
+
+
+    if offsets is None:
+        limit = 0.75*pulses[0].bw
+        offsets = np.linspace(-limit, limit, 100)
+        
+    if tend is None:
+        tend = pulses[-1].end
+        
+    if pc is None:
+        pc = np.zeros((len(pulses)+1, 1))
+    
+    npc = pc.shape[1]
+    noff = len(offsets)
+    
+    magn = np.zeros((3, len(offsets), npc))
+
+    for phase in range(npc):
+        for o in range(noff):
+            #receiver = np.array([0, 0, 0])
+            
+            # TODO: add option to start with different magentization vector
+            M = np.array([0, 0, 1]) # default: magnetization on z
+            
+            # potential delay before first pulse
+            if pulses[0].start > 0:
+                M = np.dot(Rz(2 * np.pi * offsets[o] * pulses[0].start), M)
+            
+            # TODO loop over pulses and take delays into account
+            for i, p in enumerate(pulses):
+                # if offsets[o]==0:
+                #     print(pc[i,phase])
+                for j in range(p.ns):
+                    #R_phi = np.pi * (ph1[phase] + p.ph[i]) / 180
+                    R_phi = pc[i,phase] + p.ph[j]
+                    M = np.dot(Rtot(p.r[j], offsets[o], R_phi, p.tres), M)
+                    
+                # potential delay between pulses
+                if i < len(pulses) - 1:
+                    
+                    if p.end < pulses[i+1].start: # TODO np.isclose
+                        M = np.dot(Rz(-2 * np.pi * offsets[o] * (pulses[i+1].start-p.end)), M)
+
+            # potential delay after last pulse
+            if pulses[-1].end < tend:
+                M = np.dot(Rz(2 * np.pi * offsets[o] * (tend - pulses[-1].end)), M)
+
+            #receiver = receiver + 
+            magn[:, o, phase] = np.dot(Rz(-pc[-1,phase]), M)
+            
+    magn = np.sum(magn, axis=2) / npc # phase cycling collapse
 
     return magn, offsets
 
@@ -80,7 +196,7 @@ def magn_phase(magn):
     
     # TODO non 1D case
     """
-    return np.angle(magn[0,:] + 1j * magn[1,:]) / np.pi
+    return np.angle(magn[1,:] + 1j * magn[0,:])
 
 
 def B1_phase_variance(pulse, timestep, delta_F, max_rf_amp, nspins, N):
@@ -170,27 +286,26 @@ def plot_magn(magn, offsets):
     ----------
     magn: numpy array of floats
         magnetization to plot
-    offsets: numpy array of floats
-        magnetization offsets to plot
+    offsets: numpy array of floats    
         
     Plot over the desired bandwith the Ix, Iy, Iz, Ixy.
     
     """
-
-    # set figure parameters
-    mpl.rcParams['axes.spines.right'] = False
-    mpl.rcParams['axes.spines.top'] = False
-    mpl.rcParams['xtick.top'] = False
-    mpl.rcParams['ytick.right'] = False    
+        
+    # # set figure parameters
+    # mpl.rcParams['axes.spines.right'] = False
+    # mpl.rcParams['axes.spines.top'] = False
+    # mpl.rcParams['xtick.top'] = False
+    # mpl.rcParams['ytick.right'] = False    
 
     # plot magnetisations against offset
-    plt.figure('Magnetisations vs offset')
+    plt.figure() # 'Magnetisations vs offset'
 
     Ix = magn[0,:]
     Iy = magn[1,:]
     Iz = magn[2,:]
     Ixy = np.sqrt(Ix**2 + Iy**2)
-    phase = np.angle(Iy + 1j * Ix) / np.pi
+    phase = np.angle(Iy + 1j * Ix)
 
     display = {"Ix": Ix, "Iy": Iy, "Iz": Iz, "Ixy":Ixy, "Phase":phase}
 
@@ -206,12 +321,14 @@ def plot_magn(magn, offsets):
         plt.ylim(-1, 1)
         plt.ylabel(key)
         nb_subplot += 1
+        if key == "Phase":
+            plt.ylim(min(value), max(value))
 
     plt.xlabel("Offset")
     plt.tight_layout()
 
     return None 
-    
+
 
 def B1_variability(pulse, timestep, delta_F, max_rf_amp, nspins, N):
     '''
@@ -245,7 +362,6 @@ def B1_variability(pulse, timestep, delta_F, max_rf_amp, nspins, N):
     plt.title('Variation of phase across B1 frequencies')
     
     return None
-
 
 
 def mvdot(matrix, vector):
@@ -299,8 +415,7 @@ def mvdot(matrix, vector):
 
     return result
 
-    
-    
+
 def Rz(theta):
     '''
     Function to calculate the rotation by an angle theta around the z axis.
@@ -440,3 +555,172 @@ def Rtot(omega, offsets, phi, delta_time):
             rtot = identity + (np.sin(beta) * K) + ((1 - np.cos(beta)) * K2)
 
         return np.reshape(rtot, (3,3))
+    
+
+def rx0(phi):
+    """Returns the rotational matrix for an angle phi around the x-axis
+    
+    If phi is an array containing n angles, return an array of n
+    rotational matrixes for these angles around the x-axis.
+    """
+    if type(phi)==np.ndarray:
+
+        m11 = np.full(len(phi),1)
+        m12 = np.full(len(phi),0)
+        m22 = np.cos(phi)
+        m23 = np.sin(phi)
+
+        m1 = np.stack((m11, m12, m12), axis=0)
+        m2 = np.stack((m12, m22, m23), axis=0)
+        m3 = np.stack((m12, m23, m22), axis=0)
+
+        x_rot_mat = np.stack((m1, m2, m3), axis=0)
+
+    else:
+        x_rot_mat = np.array(([1, 0, 0], \
+                            [0, np.cos(phi), np.sin(phi)], \
+                            [0, np.sin(phi), np.cos(phi)]))
+
+    return x_rot_mat
+
+def ry0(phi):
+    """Returns the rotational matrix for an angle phi around the y-axis
+    """
+    if type(phi)==np.ndarray:
+        m11 = np.cos(phi)
+        m12 = np.full(len(phi),0)
+        m13 = np.sin(phi)
+        m22 = np.full(len(phi),1)
+
+        m1 = np.stack((m11, m12, m13), axis=0)
+        m2 = np.stack((m12, m22, m12), axis=0)
+        m3 = np.stack((-m13, m12, m11), axis=0)
+
+        y_rot_mat = np.stack((m1, m2, m3), axis=0)
+
+    else:
+        y_rot_mat = np.array(([np.cos(phi), 0, np.sin(phi)], \
+                            [0, 1, 0], \
+                            [-np.sin(phi), 0, np.cos(phi)]))
+    return y_rot_mat
+
+def rz0(phi):
+    """Returns the rotational matrix for an angle phi around the z-axis
+    """
+    if type(phi)==np.ndarray:
+        m11 = np.cos(phi)
+        m12 = np.sin(phi)
+        m13 = np.full(len(phi),0)
+        m33 = np.full(len(phi),1)
+
+        m1 = np.stack((m11, -m12, m13), axis=0)
+        m2 = np.stack((m12, m11, m13), axis=0)
+        m3 = np.stack((m13, m13, m33), axis=0)
+
+        z_rot_mat = np.stack((m1, m2, m3), axis=0)
+
+    else:
+        z_rot_mat = np.array(([np.cos(phi), -np.sin(phi), 0], \
+                            [np.sin(phi), np.cos(phi), 0], \
+                            [0, 0, 1]))
+    
+    return z_rot_mat
+
+def rtot0(omega, offs, phi, time):
+    """Returns the rotational matrix associated with a linear chirp
+    inputs: pulse parameters
+        - omega: point radiofrequency  or array containing points 
+        associated with the B1 field
+        - offs: point offset
+        - phi: point phase
+        - time
+    output:
+        - total_rot_mat: rotational matrix point associated with the 
+        pulse point or array of rotational matrixes associated with the 
+        pulse points
+    Also computes omega_eff the angular frequency of the effective field
+    Beff, theta the angle between Beff and B1 and the flip angle alpha 
+    for the calculation of total_rot_mat
+    """
+    # Beff angular frequency
+    omega_eff = np.sqrt((2 * np.pi * omega)**2 + (2 * np.pi * offs)**2)
+    
+    theta = np.arctan2(omega, offs) # angle between Beff and B1
+    alpha = time * omega_eff # flip angle
+    
+    if type(phi)==np.ndarray:
+        
+        # array with each pulse point rotational matrix
+        total_rot_mat = np.einsum('ijh,jkh,klh,lmh,mnh->inh',
+            rz0(phi), ry0(theta), rz0(alpha), ry0(-theta),rz0(-phi))
+
+    else:
+
+        total_rot_mat = \
+            rz0(phi).dot(ry0(theta).dot(rz0(alpha).dot(ry0(-theta).dot(rz0(-phi)))))
+    
+    return total_rot_mat
+
+
+def chorus_magn_calc(pc1, pc2, pc3, pc31, offset, p1, p2, p3):
+    """Computes the magnetization of a CHORUS pulse sequence.
+    
+    input: CHORUS pulse sequence
+        - phase cycling information of each pulse pc1, pc2, pc3
+        - offset information: offset
+        - the pulses p1, p2, p3
+        
+    output:
+        - spin angular momentum operators: Ix, Iy, Iz, Ixy
+        - the magnetization phase: Phase
+        
+    """
+    npc = len(pc31)
+    magn_fin_pc = np.zeros((3, len(offset), npc))
+
+    for ns in range(npc): # phase cycling loop
+
+		# pulse phase: adding phase cycling +radian conversion
+        phi1_m = (p1.ph + pc1[ns]) * np.pi/180
+        phi2_m = (p2.ph + pc2[ns]) * np.pi/180
+        phi3_m = (p3.ph + pc3[ns]) * np.pi/180
+		
+        for noff, off in enumerate(offset):
+            
+            mout = np.array([0, 0, 0])
+            magn = np.array([0, 0, 1])
+            
+            # pulse 1 points: magnetization after pulse 1
+            rot1 = rtot(p1.rf, off, phi1_m, p1.tres)
+            for i in range(p1.n):
+                magn = np.dot(rot1[:,:,i],magn)
+
+            # pulse 2 points: magnetization after pulse 2
+            rot2 = rtot(p2.rf, off, phi2_m, p2.tres)
+            for i in range(p2.n):
+                magn = np.dot(rot2[:,:,i],magn)
+            
+            # magnetization after spin evolution during the delay
+            magn = rz(2 * np.pi * off * (p1.pw/2)).dot(magn)
+
+            # pulse 3 points: magnetization after pulse 3
+            rot3 = rtot(p3.rf, off, phi3_m, p3.tres)
+            for i in range(p3.n):
+                magn = np.dot(rot3[:,:,i],magn)
+
+            # receiver phase
+            mout = mout + rz(-np.pi / 180 * pc31[ns]).dot(magn)
+            
+            magn_fin_pc[:, noff, ns] = mout
+            
+    magn_fin = np.sum(magn_fin_pc, axis=2) / npc # phase cycling collapse
+    
+    Ix = magn_fin[0,:]
+    Iy = magn_fin[1,:]
+    Iz = magn_fin[2,:]
+    Ixy = np.sqrt(Ix**2 + Iy**2)
+        
+    Phase = np.angle(Iy + 1j * Ix) * 1 / np.pi
+
+    return Ix, Iy, Iz, Ixy, Phase
+
