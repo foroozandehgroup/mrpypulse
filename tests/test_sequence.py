@@ -1,5 +1,5 @@
 import numpy as np
-import simulation
+import magnetization
 import sequence
 
 def test_Exc_3fs_init():
@@ -15,5 +15,6 @@ def test_Exc_3fs_init():
     
     # check that magnetization is recocused in centre part
     off = np.linspace(-0.25*bw, 0.25*bw, 10)
-    magn, off = simulation.simulate(chorus.pulses, offsets=off, pc=chorus.pc)
+    magn, off = magnetization.simulate(
+        chorus.pulses, offsets=off, pc=chorus.pc)
     assert np.all(magn[1,:] > 0.9)

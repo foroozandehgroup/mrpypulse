@@ -2,7 +2,7 @@
 
 import numpy as np
 import pulse
-import simulation
+from magnetization import simulate, magn_phase, plot_magn
 import matplotlib.pyplot as plt
 
 
@@ -188,12 +188,11 @@ class Exc_3fs(Sequence):
         if polyfit:
             limit = 0.5*pulses[0].bw
             off = np.linspace(-limit, limit, 51)
-            magn, off = simulation.simulate(pulses, offsets=off, pc=pc)
+            magn, off = simulate(pulses, offsets=off, pc=pc)
 
-            if plot: simulation.plot_magn(magn, off)
+            if plot: plot_magn(magn, off)
 
-            p1.add_ph_polyfit(simulation.magn_phase(magn), 
-                              **polyfit_args, plot=plot)
+            p1.add_ph_polyfit(magn_phase(magn), **polyfit_args, plot=plot)
 
         Sequence.__init__(self, pulses, p3.end+t_del, pc)
         # add other parameters?
@@ -202,9 +201,9 @@ class Exc_3fs(Sequence):
             # simulation
             limit = 0.5*pulses[0].bw
             off = np.linspace(-limit, limit, 100)
-            magn, off = simulation.simulate(self.pulses, offsets=off, pc=self.pc)
+            magn, off = simulate(self.pulses, offsets=off, pc=self.pc)
             
-            simulation.plot_magn(magn, off)
+            plot_magn(magn, off)
             
             plt.figure()
             self.plot()
