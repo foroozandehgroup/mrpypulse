@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 # Grab the version number without importing penguins.
-exec(open('esrpoise/_version.py').read())
+exec(open('mrpypulse/_version.py').read())
 
 setup(
     name="mrpypulse",
