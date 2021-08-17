@@ -160,12 +160,18 @@ class Exc_3fs(Sequence):
     # class or function?
     """
 
-    def __init__(self, t90min, t180min, bw, tres, Q_exc=0.4412712003053, Q_ref=5, t_del=0,
-                 plot=False, polyfit=False, pulse_param=(), polyfit_opt=(), **kwargs):
+    def __init__(self, t90min, t180min, bw, tres, 
+                 Q_exc=0.4412712003053, Q_ref=5, pulse_args={}, t_del=0,
+                 polyfit=False, polyfit_args={}, 
+                 plot=False):
 
-        p1 = pulse.Parametrized(tp=t90min, bw=bw, Q=Q_exc, tres=tres)
-        p2 = pulse.Parametrized(tp=t180min+t90min/2, bw=bw, Q=Q_ref, tres=tres, start=t90min)
-        p3 = pulse.Parametrized(tp=t180min, bw=bw, Q=Q_ref, tres=tres, start=p2.end + t90min/2 + t_del)
+        p1 = pulse.Parametrized(tp=t90min, bw=bw, Q=Q_exc, 
+                                tres=tres, **pulse_args)
+        p2 = pulse.Parametrized(tp=t180min+t90min/2, bw=bw, Q=Q_ref, 
+                                tres=tres, start=t90min, **pulse_args)
+        p3 = pulse.Parametrized(tp=t180min, bw=bw, Q=Q_ref, 
+                                tres=tres, start=p2.end + t90min/2 + t_del,
+                                **pulse_args)
 
         pulses = [p1, p2, p3]
 
@@ -184,10 +190,10 @@ class Exc_3fs(Sequence):
             off = np.linspace(-limit, limit, 51)
             magn, off = simulation.simulate(pulses, offsets=off, pc=pc)
 
-            if plot:
-                simulation.plot_magn(magn, off)
+            if plot: simulation.plot_magn(magn, off)
 
-            p1.add_ph_polyfit(simulation.magn_phase(magn), plot=plot)
+            p1.add_ph_polyfit(simulation.magn_phase(magn), 
+                              **polyfit_args, plot=plot)
 
         Sequence.__init__(self, pulses, p3.end+t_del, pc)
         # add other parameters?
