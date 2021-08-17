@@ -7,7 +7,7 @@ import sys
 sys.path.append('../mrpypulse')
 
 # importing
-from mrpypulse.pulse import pulse
+from mrpypulse import pulse
 
 if __name__ == "__main__":
 

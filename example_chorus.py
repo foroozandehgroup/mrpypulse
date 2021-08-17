@@ -1,6 +1,6 @@
 # script to generate the standard published CHORUS for NMR (2019)
 
-import sequence as seq
+from mrpypulse import sequence as seq
 import time
 
 if __name__ == "__main__":

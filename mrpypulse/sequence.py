@@ -1,8 +1,8 @@
 """ This module contains the class Sequence."""
 
 import numpy as np
-import pulse
-from magnetization import simulate, magn_phase, plot_magn
+from . import pulse
+from .magnetization import simulate, magn_phase, plot_magn
 import matplotlib.pyplot as plt
 
 
