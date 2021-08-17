@@ -559,7 +559,7 @@ def Rtot(omega, offsets, phi, delta_time):
 
             rtot = identity + (np.sin(beta) * K) + ((1 - np.cos(beta)) * K2)
 
-        return rtot # np.transpose(np.reshape(rtot, (3,3)))
+        return np.transpose(np.reshape(rtot, (3,3)))
     
 
 def rx0(phi):
