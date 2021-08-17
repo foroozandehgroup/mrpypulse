@@ -4,6 +4,7 @@ import numpy as np
 import scipy.interpolate
 import matplotlib.pyplot as plt
 
+# TODO add Random()
 
 class Pulse:
 
@@ -47,6 +48,7 @@ class Pulse:
     ID: string
         Identification pulse
     TODO discuss addition of flip angle +others?
+    TODO empty pulse case
     """
 
     def __init__(self, tp: float = None, ns: int = None, tres: float = None,
@@ -110,7 +112,7 @@ class Pulse:
         self.start = start
         self.end = self.start + self.tp
 
-        # t defines the position of each segment (defined in the middle)
+        # t defines the position of each segment (middle)
         self.t = np.linspace(
                  self.start+self.tres/2, self.end-self.tres/2, self.ns)
 
@@ -577,15 +579,22 @@ class Shape(Pulse):
         Pulse.__init__(self, **kwargs)
 
         self.bw = bw
+        
+        if self.bw is not None:
+            self.tbp = self.bw * self.tp
+        else:
+            self.tbp = None
 
         # test to distinguish no modulation from unknown modulation
-        if AM is None:
-            # test on self.r
-            if np.all(self.r != self.r[0]):
-                self.AM = "unknown"
+        # (only if the pulse has coordinatess)
+        if AM is None:           
+            if hasattr(self, 'ph'):
+                if np.all(self.r != self.r[0]):
+                    self.AM = "unknown"
         if FM is None:
-            if np.all(self.ph != self.ph[0]):
-                self.FM = "unknown"
+            if hasattr(self, 'ph'):
+                if np.all(self.ph != self.ph[0]):
+                    self.FM = "unknown"
 
     def __str__(self):
         """
@@ -655,7 +664,8 @@ class Parametrized(Shape):
                  tp: float = None, bw: float = None, w1: float = None,
                  Q: float = None, delta_f: float = 0,
                  n: int = None, sm: float = None, B: float = None, **kwargs):
-
+        
+        # required parameters
         if FM is not None:
 
             if w1 is None and bw is not None and \
@@ -676,10 +686,20 @@ class Parametrized(Shape):
 
             else:
                 raise TypeError('Exactly 3 of Q, w1, tp and bw should be used '
-                                'as parameters.')
+                                'as parameters for a frequency-modulated '
+                                'pulse.')
             self.Q = Q
             self.w1 = w1
-
+            
+        elif AM is not None:
+            if w1 is None:
+                raise TypeError('w1 is needed for an amplitude-modulated '
+                                'pulse.')
+            else: self.w1=w1
+        else:
+            raise TypeError('No parametrized pulse with both AM and FM equal '
+                            'to None')
+            
         Shape.__init__(self, AM=AM, FM=FM, bw=bw, tp=tp, **kwargs)
 
         # frequency offset
