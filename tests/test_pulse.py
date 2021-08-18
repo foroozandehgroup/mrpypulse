@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import copy
-import pulse
+from mrpypulse import pulse
 import sys
 sys.path.append('..')
 
@@ -118,14 +118,14 @@ def test_parametrized_init():
     p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, bw=bw, w1=p1.w1, tres=tres)
     p4 = pulse.Parametrized(AM=am, FM=fm, Q=Q, bw=bw, w1=p1.w1, tres=tres)
     assert p1 == p2 == p3 == p4
-    
+
     # assert AM only and FM only pulses
     p5 = pulse.Parametrized(AM=None, FM=fm, Q=Q, bw=bw, w1=p1.w1, tres=tres)
     p6 = pulse.Parametrized(AM=am, FM=None, tp=tp, w1=p1.w1, tres=tres)
     p5.r = p6.r
     p6.ph = p5.ph
     assert p5 == p6
-    
+
     with pytest.raises(TypeError):
         p6 = pulse.Parametrized(AM=None, FM=None, tp=tp, w1=p1.w1, tres=tres)
 

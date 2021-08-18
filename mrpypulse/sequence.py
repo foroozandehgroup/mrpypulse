@@ -66,7 +66,7 @@ class Sequence:
         # pulses = [self.pulses, sequence2add.pulses]
         # sequence_sum = sequence(pulses, total_time=total_time)
         # return sequence_sum
-        
+
     def __eq__(self, seq):
         """
         Parameters
@@ -74,23 +74,23 @@ class Sequence:
         seq: Sequence object
             sequence to compare
         Returns
-        True/False: boolean            
-        
+        True/False: boolean
+
         2 sequences are considered equal if they have the same total duration,
-        the same pulses and all of their pulses are placed at the same 
-        position. 
+        the same pulses and all of their pulses are placed at the same
+        position.
         """
-                
+
         if self.total_time != seq.total_time:
             return False
-       
+
         if self.pulses != seq.pulses:
             return False
-        
+
         for p1, p2 in zip(self.pulses, seq.pulses):
             if p1.start != p2.start:
                 return False
-        
+
         return True
 
     def insert(self, elem, position):
@@ -113,7 +113,7 @@ class Sequence:
         else:
             raise ValueError('A pulse (Pulse objects) or a delay (float) '
                              'should be inserted.')
-            
+
     def append(self, elem):
         """
         Parameters
@@ -160,16 +160,16 @@ class Exc_3fs(Sequence):
     # class or function?
     """
 
-    def __init__(self, t90min, t180min, bw, tres, 
+    def __init__(self, t90min, t180min, bw, tres,
                  Q_exc=0.4412712003053, Q_ref=5, pulse_args={}, t_del=0,
-                 polyfit=False, polyfit_args={}, 
+                 polyfit=False, polyfit_args={},
                  plot=False):
 
-        p1 = pulse.Parametrized(tp=t90min, bw=bw, Q=Q_exc, 
+        p1 = pulse.Parametrized(tp=t90min, bw=bw, Q=Q_exc,
                                 tres=tres, **pulse_args)
-        p2 = pulse.Parametrized(tp=t180min+t90min/2, bw=bw, Q=Q_ref, 
+        p2 = pulse.Parametrized(tp=t180min+t90min/2, bw=bw, Q=Q_ref,
                                 tres=tres, start=t90min, **pulse_args)
-        p3 = pulse.Parametrized(tp=t180min, bw=bw, Q=Q_ref, 
+        p3 = pulse.Parametrized(tp=t180min, bw=bw, Q=Q_ref,
                                 tres=tres, start=p2.end + t90min/2 + t_del,
                                 **pulse_args)
 
@@ -179,7 +179,7 @@ class Exc_3fs(Sequence):
         pc2 = np.array([0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3])
         pc3 = np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3])
 
-        #pc31 = pc_rec([pc1, pc2, pc3], [-1, +2, -2])
+        # pc31 = pc_rec([pc1, pc2, pc3], [-1, +2, -2])
 
         pc31 = np.array([0, 2, 0, 2, 2, 0, 2, 0, 0, 2, 0, 2, 2, 0, 2, 0])
         pc = np.pi/2*np.stack((pc1, pc2, pc3, pc31))
@@ -188,9 +188,10 @@ class Exc_3fs(Sequence):
         if polyfit:
             limit = 0.5*pulses[0].bw
             off = np.linspace(-limit, limit, 51)
-            magn, off = simulate(pulses, offsets=off, pc=pc)
+            magn = simulate(pulses, off, pc=pc)
 
-            if plot: plot_magn(magn, off)
+            if plot:
+                plot_magn(magn, off)
 
             p1.add_ph_polyfit(magn_phase(magn), **polyfit_args, plot=plot)
 
@@ -201,9 +202,9 @@ class Exc_3fs(Sequence):
             # simulation
             limit = 0.5*pulses[0].bw
             off = np.linspace(-limit, limit, 100)
-            magn, off = simulate(self.pulses, offsets=off, pc=self.pc)
-            
+            magn = simulate(self.pulses, off, pc=self.pc)
+
             plot_magn(magn, off)
-            
+
             plt.figure()
             self.plot()

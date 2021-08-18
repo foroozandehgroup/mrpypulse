@@ -10,9 +10,9 @@ if __name__ == "__main__":
     bw = 300e3
     tres = 0.5e-6
     start = time.time()
-    chorus = seq.Exc_3fs(t90min, t180min, bw, tres, 
-                         plot=True, t_del=0, polyfit=True, 
+    chorus = seq.Exc_3fs(t90min, t180min, bw, tres,
+                         plot=True, t_del=0, polyfit=True,
                          pulse_args={"sm": 12.5},
                          polyfit_args={"deg": 4})
-    
+
     print(f"Computation time: {format(time.time() - start,'0.2f')}s")

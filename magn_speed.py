@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # check that magnetization is recocused in centre part
     off = np.linspace(-0.5*bw, 0.5*bw, 100)
     start = time.time()
-    magn, off = simulate(chorus.pulses, offsets=off, pc=chorus.pc)
+    magn = simulate(chorus.pulses, off=off, pc=chorus.pc)
     print(f"simulate computation time: {format(time.time() - start,'0.2f')}s")
     plot_magn(magn, off)
     

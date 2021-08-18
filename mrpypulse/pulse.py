@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 # TODO add Random()
 
+
 class Pulse:
 
     """
@@ -213,7 +214,7 @@ class Pulse:
         """
         # TODO testing
         # TODO __rsub__
-        
+
         if not np.isclose(self.tres, pulse2add.tres, rtol=1e-6, atol=1e-12):
             raise ValueError(
                 'Pulses can only be added if their tres is the same.')
@@ -224,8 +225,8 @@ class Pulse:
         end = np.max([self.end, pulse2add.end])
         tp = end - start
         ns = tp/tres
-        # TODO cleaner solution: only use int(), no rounding and catch errors if too far
-        # not working tho
+        # TODO cleaner solution: only use int(), no rounding and catch errors
+        # if too far (not working tho)
         if np.modf(ns)[0] > 0.99999:  # account for float type operations
             ns = int(np.ceil(ns))
         else:
@@ -264,7 +265,7 @@ class Pulse:
     def __radd__(self, object2add):
         """
         Pulse add for non-pulses objects
-        
+
         Parameters
         ----------
         object2add: object
@@ -305,6 +306,7 @@ class Pulse:
     def __str__(self):
         """
         Convert pulse object to string (typically used by print)
+        TODO take into account empyt pulse?
         """
 
         pulsestr = 'Pulse object with the following attributes\n'
@@ -361,7 +363,7 @@ class Pulse:
 
         # compute phase correction over whole pulse
         x_ph_corr = np.linspace(1, len(ph), self.ns)
-        ph_corr = np.polyval(poly, x_ph_corr)     
+        ph_corr = np.polyval(poly, x_ph_corr)
 
         # apply phase correction
         self.ph += ph_corr
