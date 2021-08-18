@@ -3,6 +3,8 @@
 import numpy as np
 import scipy.interpolate
 import matplotlib.pyplot as plt
+import time
+import os
 
 # TODO add Random()
 
@@ -58,6 +60,9 @@ class Pulse:
                  phi0: float = 0, start: float = 0, ID: str = None):
         if ID is not None:
             self.ID = ID
+        else:
+            self.ID = 'unnamed_pulse'
+
         if x is None and y is None and r is None and ph is None:
             # no coordinates (empty pulse)
             pass
@@ -419,7 +424,7 @@ class Pulse:
         plt.xlim(self.start, right=self.end)
         plt.title(title)
 
-    def pulse2Xepr(self):
+    def xep_fmt(self):
         """
         Export the pulse to Xepr format
 
@@ -435,7 +440,7 @@ class Pulse:
 
         return x_Xepr, y_Xepr
 
-    def pulse2TopSpin(self):
+    def topspin_fmt(self):
         """
         Export the pulse to TopSpin format
 
@@ -451,15 +456,77 @@ class Pulse:
 
         return r_TopSpin, ph_TopSpin
 
-    def pulse2Xepr_file(self):
+    def xepr_file(self, shp_nb: int, path: str = None):
         """
         Export the pulse to a shape file (.shp) for Xepr
-        """
 
-    def pulse2TopSpin_file(self):
+        Parameters
+        ----------
+            path: string, default to current directory
+                where the file is created
+            shp_nb: int
+                shape number
         """
-        Export the pulse to a shape file for TopSpin
+        if path is None:
+            path = os.getcwd()
+
+        filename = os.path.join(path, str(shp_nb) + '.shp')
+
+        x_Xepr, y_Xepr = self.xep_fmt()
+
+        head = f"begin shape{str(shp_nb)}"
+        foot = f"end shape{str(shp_nb)}"
+
+        np.savetxt(filename, np.transpose((x_Xepr, y_Xepr)),
+                   fmt="%.6f", delimiter=",",
+                   newline="\n", header=head,
+                   footer=foot, comments="")
+
+    def topspin_file(self, path: str = None):
         """
+        Export the pulse to a text file for TopSpin
+
+        Parameters
+        ----------
+            path: string, default to current directory
+                where the file is created
+        """
+        if path is None:
+            path = os.getcwd()
+
+        r_TopSpin, ph_TopSpin = self.topspin_fmt()
+
+        head = "\n".join([
+            f"TITLE= {self.ID}",
+            "JCAMP-DX= 5.00 Bruker JCAMP library",
+            "DATA TYPE= Shape Data",
+            "ORIGIN= Bruker BioSpin GmbH",
+            "OWNER= <M.FOROOZANDEH>",
+            f"DATE= {time.strftime('%d-%b-%Y')}",
+            f"TIME= {time.strftime('%H:%M:%S')}",
+            f"$SHAPE_PARAMETERS= Length of Pulse [msec] {str(self.tp*1e3)}",
+            f"MINX= {str(np.amin(r_TopSpin))}",
+            f"MAXX= {str(np.amax(r_TopSpin))}",
+            f"MINY= {str(np.amin(ph_TopSpin))}",
+            f"MAXY= {str(np.amax(ph_TopSpin))}",
+            "$SHAPE_EXMODE= ",
+            "$SHAPE_TOTROT= ",
+            "$SHAPE_TYPE= ",
+            "$SHAPE_USER_DEF= ",
+            "$SHAPE_REPHFAC= ",
+            "$SHAPE_BWFAC= ",
+            "$SHAPE_BWFAC50= ",
+            "$SHAPE_INTEGFAC= ",
+            "$SHAPE_MODE= ",
+            f"NPOINTS= {str(self.ns)}",
+            "XYPOINTS= (XY..XY)"
+            ])
+
+        filename = os.path.join(path, self.ID + '.txt')
+
+        np.savetxt(filename, np.transpose((r_TopSpin, ph_TopSpin)),
+                   fmt="%.6f", delimiter=", ",
+                   header=head, footer="END=", comments="##")
 
     def resonator_easyspin(self, eng, f, H_f, nu):
         """
@@ -581,7 +648,7 @@ class Shape(Pulse):
         Pulse.__init__(self, **kwargs)
 
         self.bw = bw
-        
+
         if self.bw is not None:
             self.tbp = self.bw * self.tp
         else:
@@ -589,7 +656,7 @@ class Shape(Pulse):
 
         # test to distinguish no modulation from unknown modulation
         # (only if the pulse has coordinatess)
-        if AM is None:           
+        if AM is None:
             if hasattr(self, 'ph'):
                 if np.all(self.r != self.r[0]):
                     self.AM = "unknown"
@@ -666,7 +733,7 @@ class Parametrized(Shape):
                  tp: float = None, bw: float = None, w1: float = None,
                  Q: float = None, delta_f: float = 0,
                  n: int = None, sm: float = None, B: float = None, **kwargs):
-        
+
         # required parameters
         if FM is not None:
 
@@ -692,16 +759,17 @@ class Parametrized(Shape):
                                 'pulse.')
             self.Q = Q
             self.w1 = w1
-            
+
         elif AM is not None:
             if w1 is None:
                 raise TypeError('w1 is needed for an amplitude-modulated '
                                 'pulse.')
-            else: self.w1=w1
+            else:
+                self.w1 = w1
         else:
             raise TypeError('No parametrized pulse with both AM and FM equal '
                             'to None')
-            
+
         Shape.__init__(self, AM=AM, FM=FM, bw=bw, tp=tp, **kwargs)
 
         # frequency offset
@@ -855,9 +923,9 @@ class Parametrized(Shape):
             else:
                 end = 100
 
-        ph_corr = super().add_ph_polyfit(ph, 
-                                      start=start, end=end, deg=deg, 
-                                      plot=plot)
+        ph_corr = super().add_ph_polyfit(ph,
+                                         start=start, end=end, deg=deg,
+                                         plot=plot)
 
         return ph_corr
 
