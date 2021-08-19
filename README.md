@@ -17,3 +17,11 @@ git clone https://github.com/foroozandehgroup/mrpypulse
 cd mrpypulse
 pip install -e .
 ```
+
+### tests
+
+Require pytest, inside the top-level `mrpypulse` directory, run:
+
+```
+pytest \tests
+```
