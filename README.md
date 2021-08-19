@@ -23,5 +23,5 @@ pip install -e .
 Require pytest, inside the top-level `mrpypulse` directory, run:
 
 ```
-pytest \tests
+pytest tests\
 ```
