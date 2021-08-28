@@ -1,0 +1,15 @@
+README.md
+setup.py
+mrpypulse/__init__.py
+mrpypulse/_version.py
+mrpypulse/example_chorus.py
+mrpypulse/example_pulses.py
+mrpypulse/magn_speed.py
+mrpypulse/magnetization.py
+mrpypulse/pulse.py
+mrpypulse/sequence.py
+mrpypulse.egg-info/PKG-INFO
+mrpypulse.egg-info/SOURCES.txt
+mrpypulse.egg-info/dependency_links.txt
+mrpypulse.egg-info/requires.txt
+mrpypulse.egg-info/top_level.txt

@@ -424,7 +424,7 @@ class Pulse:
         plt.xlim(self.start, right=self.end)
         plt.title(title)
 
-    def xep_fmt(self):
+    def xepr_fmt(self):
         """
         Export the pulse to Xepr format
 
@@ -435,10 +435,10 @@ class Pulse:
         y: numpy array of floats
             Pulse Cartesian coordinates y normalized from -1 to 1
         """
-        x_Xepr = self.x / self.w1
-        y_Xepr = self.y / self.w1
+        x_xepr = self.x / self.w1
+        y_xepr = self.y / self.w1
 
-        return x_Xepr, y_Xepr
+        return x_xepr, y_xepr
 
     def topspin_fmt(self):
         """
@@ -472,12 +472,12 @@ class Pulse:
 
         filename = os.path.join(path, str(shp_nb) + '.shp')
 
-        x_Xepr, y_Xepr = self.xep_fmt()
+        x_xepr, y_xepr = self.xepr_fmt()
 
         head = f"begin shape{str(shp_nb)}"
         foot = f"end shape{str(shp_nb)}"
 
-        np.savetxt(filename, np.transpose((x_Xepr, y_Xepr)),
+        np.savetxt(filename, np.transpose((x_xepr, y_xepr)),
                    fmt="%.6f", delimiter=",",
                    newline="\n", header=head,
                    footer=foot, comments="")

@@ -1,0 +1,24 @@
+Metadata-Version: 2.1
+Name: mrpypulse
+Version: 0.0.1
+Summary: Mr. PyPulse for Magnetic Resonance pulses
+Home-page: https://github.com/foroozandehgroup/mrpypulse
+Author: Jean-Baptiste Verstraete, Ali Sherzad, Mohammadali Foroozandeh
+Author-email: mohammadali.foroozandeh@chem.ox.ac.uk
+License: UNKNOWN
+Description: # mrpypulse
+        
+        Mr. Py Pulse for generation and manipulation of Magnetic Resonance pulses in Python.
+        
+        Modules:
+          - pulse, for creation and manipulation of pulses
+          - magnetization, for simulation of pulses effect on magnetization
+          - sequence, for creation and manipulation of sequence of pulses
+        
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown

@@ -9,7 +9,6 @@ simualte2 uses the functions developped by Ali (currently not working)
 """
 
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
@@ -436,21 +435,23 @@ def B1_phase_variance(pulse, timestep, delta_F, max_rf_amp, nspins, N):
             phi[spin] = phi[spin] + 360
         elif phi[spin] > 180:
             phi[spin] = phi[spin] - 360
-        
+
     return z, phi
 
 
 def B1_variability(pulse, timestep, delta_F, max_rf_amp, nspins, N):
     '''
-    This function plots the variability of the phase gainst B1 of the pulse. 
+    This function plots the variability of the phase gainst B1 of the pulse.
 
-    To prevent confusion of inputs and best results this should be called straight after the optimised pulse has been created,
-    and from within the same script. 
+    To prevent confusion of inputs and best results this should be called
+    straight after the optimised pulse has been created, and from within the
+    same script.
 
     Parameters
     ----------
     Pulse: ndarray
-        numpy array containing the control amplitudes (x_controls, y_controls). (1, 2N) array
+        numpy array containing the control amplitudes (x_controls, y_controls).
+        (1, 2N) array
     timestep: float
         Time of each pulse segment in seconds
     delta_F: float
@@ -462,7 +463,7 @@ def B1_variability(pulse, timestep, delta_F, max_rf_amp, nspins, N):
     N: int
         Number of pulse segments
     '''
-    #Plot phase variation with B1
+    # Plot phase variation with B1
     plt.figure('B1 phase variation')
     z, phi = B1_phase_variance(pulse, timestep, delta_F, max_rf_amp, nspins, N)
 
@@ -470,8 +471,6 @@ def B1_variability(pulse, timestep, delta_F, max_rf_amp, nspins, N):
     plt.xlabel(r'$\frac{B_1}{B_1^0}$')
     plt.ylabel(r'$\frac{d\phi}{dB_1}$')
     plt.title('Variation of phase across B1 frequencies')
-    
-    return None
 
 
 def mvdot(matrix, vector):
@@ -491,7 +490,7 @@ def mvdot(matrix, vector):
     result: ndarray
         Product of the multiplication as a row vector.
     '''
-    
+
     if matrix.ndim == 1:
         matrix = matrix.reshape((1, -1))
 
