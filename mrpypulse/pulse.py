@@ -720,6 +720,8 @@ class Parametrized(Shape):
         smoothing percentage for sinsmoothed AM
     B: float
         smoothing index for HS pulses
+    p: float
+        smoothing index for Gaussian pulses
     **kwargs
         other argurments to transmit to parent classes
 
@@ -732,7 +734,8 @@ class Parametrized(Shape):
     def __init__(self, AM: str = "sinsmoothed", FM: str = "chirp",
                  tp: float = None, bw: float = None, w1: float = None,
                  Q: float = None, delta_f: float = 0,
-                 n: int = None, sm: float = None, B: float = None, **kwargs):
+                 n: int = None, sm: float = None, B: float = None,
+                 p: float = None, **kwargs):
 
         # required parameters
         if FM is not None:
@@ -824,6 +827,12 @@ class Parametrized(Shape):
                 np.exp(
                     -2**(self.n + 2) *
                     ((self.t - self.delta_t) / self.tp)**self.n)
+
+        elif self.AM == "Gaussian":
+            if p is None:
+                p = 5
+            self.p = p
+            self.r = self.w1 * np.exp(-p*((self.t-self.delta_t)/self.tp)**2)
 
         elif self.AM is None:
             self.r = self.w1 * np.ones(self.ns)

@@ -1,12 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
-# import sys
-
-# # setting path
-# sys.path.append('../mrpypulse')
-
-# importing
 from mrpypulse import pulse
 
 if __name__ == "__main__":
@@ -42,3 +35,9 @@ if __name__ == "__main__":
                             tp=500e-6, Q=5., bw=300e3, ns=1000)
     plt.figure()
     p3.plot(title="HS pulse")
+
+    # ESR Gaussian pulse
+    p4 = pulse.Parametrized(AM="Gaussian", FM=None,
+                            w1=40e6, tp=90e-9, tres=0.625e-9, p=15)
+    plt.figure()
+    p4.plot(form='polar')
