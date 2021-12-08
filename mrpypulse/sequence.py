@@ -187,7 +187,8 @@ class Exc_3fs(Sequence):
         # simulation
         if polyfit:
             limit = 0.5*pulses[0].bw
-            off = np.linspace(-limit, limit, 51)
+            off = np.linspace(-0.5*pulses[0].bw+p1.delta_f,
+                              0.5*pulses[0].bw+p1.delta_f, 51)
             magn = simulate(pulses, off, pc=pc)
 
             if plot:
@@ -196,7 +197,17 @@ class Exc_3fs(Sequence):
             p1.add_ph_polyfit(magn_phase(magn), **polyfit_args, plot=plot)
 
         Sequence.__init__(self, pulses, p3.end+t_del, pc)
-        # add other parameters?
+
+        self.t90min = t90min
+        self.t180min = t180min
+        self.bw = bw
+        self.tres = tres
+        self.Q_exc = Q_exc
+        self.Q_ref = Q_ref
+        self.pulse_args = pulse_args
+        self.t_del = t_del
+        self.polyfit = polyfit
+        self.polyfit_args = polyfit_args
 
         if plot:
             # simulation
