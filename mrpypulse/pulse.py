@@ -98,7 +98,7 @@ class Pulse:
                 self.ns = int(np.floor(ns))
             self.tres = tp / self.ns  # tres adjusted for the rouding on ns
         else:
-            raise TypeError('Exactly 2 of tp, np and tres should be used.')
+            raise TypeError('Exactly 2 of tp, ns and tres should be used.')
         self.phi0 = phi0
 
         if self.ns > 10000:
@@ -617,7 +617,7 @@ class Hard(Pulse):
         # TO DO: require testing
         """
         # TOD execution should raise an error
-        Pulse.__init__(self, tp=tp, ns=2, tres=tp/2,
+        Pulse.__init__(self, tp=tp, ns=2,
                        r=np.array([w1, w1]), ph=np.array([0, 0]),
                        **kwargs)
 
@@ -700,7 +700,7 @@ class Parametrized(Shape):
     ----------
     AM: string
         amplitude modulation, can take the following values: WURST,
-        sinsmoothed (default), superGaussian, thanh
+        sinsmoothed (default), superGaussian, thanh, Gaussian
     FM: string
         frequency modulation, can take the following values: chirp (default),
         sech
@@ -737,7 +737,6 @@ class Parametrized(Shape):
                  n: int = None, sm: float = None, B: float = None,
                  p: float = None, **kwargs):
 
-        # required parameters
         if FM is not None:
 
             if w1 is None and bw is not None and \
@@ -901,8 +900,9 @@ class Parametrized(Shape):
         parametrized_str = super().__str__()
 
         if hasattr(self, 'FM'):
-            parametrized_str += (f'delta_f: {self.delta_f}\n'
-                                 f'Q:       {self.Q}\n')
+            if self.FM is not None:
+                parametrized_str += (f'delta_f: {self.delta_f}\n'
+                                     f'Q:       {self.Q}\n')
 
         if hasattr(self, 'n'):
             parametrized_str += f'n:       {self.n}\n'
