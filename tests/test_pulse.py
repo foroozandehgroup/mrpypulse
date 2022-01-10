@@ -111,23 +111,32 @@ def test_pulse_add_ph_polyfit():
 
 
 def test_parametrized_init():
-    # assert Q, w1, tp, bw equivalence
-    (am, fm, tres, tp, Q, bw) = ("WURST", "chirp", 0.5e-6, 500e-6, 5, 300e3)
-    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tres)
-    p2 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, w1=p1.w1, tres=tres)
-    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, bw=bw, w1=p1.w1, tres=tres)
-    p4 = pulse.Parametrized(AM=am, FM=fm, Q=Q, bw=bw, w1=p1.w1, tres=tres)
+    # assert chirped pulses Q, w1, tp, bw equivalence
+    (am, fm, tr, tp, Q, bw) = ("WURST", "chirp", 0.5e-6, 500e-6, 5, 300e3)
+    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr)
+    p2 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, w1=p1.w1, tres=tr)
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, bw=bw, w1=p1.w1, tres=tr)
+    p4 = pulse.Parametrized(AM=am, FM=fm, Q=Q, bw=bw, w1=p1.w1, tres=tr)
     assert p1 == p2 == p3 == p4
 
     # assert AM only and FM only pulses
-    p5 = pulse.Parametrized(AM=None, FM=fm, Q=Q, bw=bw, w1=p1.w1, tres=tres)
-    p6 = pulse.Parametrized(AM=am, FM=None, tp=tp, w1=p1.w1, tres=tres)
+    p5 = pulse.Parametrized(AM=None, FM=fm, Q=Q, bw=bw, w1=p1.w1, tres=tr)
+    p6 = pulse.Parametrized(AM=am, FM=None, tp=tp, w1=p1.w1, tres=tr)
     p5.r = p6.r
     p6.ph = p5.ph
     assert p5 == p6
 
+    # assert HS pulses Q, w1, tp, bw equivalence
+    (am, fm, B) = ("sech", "sech", 10.6)
+    p7 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr, B=B)
+    p8 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, w1=p7.w1, tres=tr, B=B)
+    p9 = pulse.Parametrized(AM=am, FM=fm, tp=tp, bw=bw, w1=p7.w1, tres=tr, B=B)
+    p10 = pulse.Parametrized(AM=am, FM=fm, Q=Q, bw=bw, w1=p7.w1, tres=tr, B=B)
+
+    assert p7 == p8 == p9 == p10
+
     with pytest.raises(TypeError):
-        p6 = pulse.Parametrized(AM=None, FM=None, tp=tp, w1=p1.w1, tres=tres)
+        p10 = pulse.Parametrized(AM=None, FM=None, tp=tp, w1=p1.w1, tres=tr)
 
 
 def test_parametrized_str():

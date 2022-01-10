@@ -186,7 +186,7 @@ class Pulse:
         if name in ('ph', 'r') and hasattr(self, 'r') and hasattr(self, 'ph'):
             object.__setattr__(self, 'x', self.r * np.cos(self.ph))
             object.__setattr__(self, 'y', self.r * np.sin(self.ph))
-            if hasattr(self, 'w1'):
+            if hasattr(self, 'w1') and name == 'r':
                 object.__setattr__(self, 'w1', np.max(self.r))
 
         elif name in ('x', 'y') and hasattr(self, 'x') and hasattr(self, 'y'):
@@ -317,7 +317,7 @@ class Pulse:
         pulsestr = 'Pulse object with the following attributes\n'
 
         if hasattr(self, 'ID'):
-            pulsestr += f'ID:    {self.ID}\n'
+            pulsestr += f'ID:      {self.ID}\n'
 
         pulsestr += (f'tp:      {self.tp}\n'
                      f'ns:      {self.ns}\n'
@@ -700,7 +700,7 @@ class Parametrized(Shape):
     ----------
     AM: string
         amplitude modulation, can take the following values: WURST,
-        sinsmoothed (default), superGaussian, thanh, Gaussian
+        sinsmoothed (default), superGaussian, sech, Gaussian
     FM: string
         frequency modulation, can take the following values: chirp (default),
         sech
@@ -715,17 +715,18 @@ class Parametrized(Shape):
     delta_f: float
         frequency offset (by default 0, correspond to a centred FM)
     n: float
-        smoothing index for WURST or superGaussian AM
+        smoothing index for WURST or superGaussian AM (default, 80 and 40
+                                                       respectively)
     sm: float
-        smoothing percentage for sinsmoothed AM
+        smoothing percentage for sinsmoothed AM (default, 10)
     B: float
-        smoothing index for HS pulses
+        smoothing index for sech AM and FM (default, 10.6)
     p: float
-        smoothing index for Gaussian pulses
+        smoothing index for Gaussian pulses (default, 5)
     **kwargs
         other argurments to transmit to parent classes
 
-    Parametrized shaped pulses make use of analytical function for their
+    Parametrized shaped pulses make use of analytical functions for their
     waveforms.
     Exactly 3 of tp, bw, w1 and Q should be used to creat a parametrized shaped
     pulse which is frequency modulated.
@@ -739,26 +740,53 @@ class Parametrized(Shape):
 
         if FM is not None:
 
-            if w1 is None and bw is not None and \
-                    tp is not None and Q is not None:
-                w1 = np.sqrt(bw * Q / (2 * np.pi * tp))
+            if FM == "chirp":
+                if w1 is None and bw is not None and \
+                        tp is not None and Q is not None:
+                    w1 = np.sqrt(bw * Q / (2 * np.pi * tp))
 
-            elif tp is None and bw is not None and \
-                    Q is not None and w1 is not None:
-                tp = bw * Q / (2 * np.pi * w1**2)
+                elif tp is None and bw is not None and \
+                        Q is not None and w1 is not None:
+                    tp = bw * Q / (2 * np.pi * w1**2)
 
-            elif bw is None and tp is not None and \
-                    Q is not None and w1 is not None:
-                bw = w1**2 * 2 * np.pi * tp / Q
+                elif bw is None and tp is not None and \
+                        Q is not None and w1 is not None:
+                    bw = w1**2 * 2 * np.pi * tp / Q
 
-            elif Q is None and bw is not None and \
-                    tp is not None and w1 is not None:
-                Q = w1**2 * 2 * np.pi * tp / bw
+                elif Q is None and bw is not None and \
+                        tp is not None and w1 is not None:
+                    Q = w1**2 * 2 * np.pi * tp / bw
 
-            else:
-                raise TypeError('Exactly 3 of Q, w1, tp and bw should be used '
-                                'as parameters for a frequency-modulated '
-                                'pulse.')
+                else:
+                    raise TypeError('Exactly 3 of Q, w1, tp and bw should be '
+                                    'used as parameters for FM.')
+
+            elif FM == "sech":
+
+                if B is None:
+                    B = 10.6
+                self.B = B
+
+                if w1 is None and bw is not None and \
+                        tp is not None and Q is not None:
+                    w1 = np.sqrt(bw * Q * B / (4 * np.pi * tp))
+
+                elif tp is None and bw is not None and \
+                        Q is not None and w1 is not None:
+                    tp = bw * Q * B / (4 * np.pi * w1**2)
+
+                elif bw is None and tp is not None and \
+                        Q is not None and w1 is not None:
+                    bw = 4 * np.pi * tp * w1**2 / (Q * B)
+
+                elif Q is None and bw is not None and \
+                        tp is not None and w1 is not None:
+                    Q = 4 * np.pi * tp * w1**2 / (bw * B)
+
+                else:
+                    raise TypeError('Exactly 3 of Q, w1, tp and bw should be '
+                                    'used as parameters for FM.')
+
             self.Q = Q
             self.w1 = w1
 
@@ -790,13 +818,13 @@ class Parametrized(Shape):
             self.r = self.w1 * (1 - np.abs(np.sin(
                      (np.pi * (self.t - self.delta_t)) / self.tp))**self.n)
 
-        elif self.AM == "tanh":
+        elif self.AM == "sech":
             if B is None:
-                B = 10.6/self.tp
+                B = 10.6
             self.B = B
 
-            # sech = 1/cosh
-            self.r = self.w1 * 1/np.cosh(self.B*(self.t-self.delta_t))
+            # no np.sech() - using sech = 1/cosh
+            self.r = self.w1 * 1/np.cosh(self.B*(self.t-self.delta_t)/self.tp)
 
         elif self.AM == "sinsmoothed":
             if sm is None:
@@ -863,20 +891,18 @@ class Parametrized(Shape):
             # instant_phase_integral = (sweep_rate * t**2) / 2 + f0 * t;
 
             self.ph = self.phi0 + \
-                      np.pi * self.bw * (self.t - self.delta_t)**2 / self.tp \
-                      + 2 * np.pi * self.delta_f * (self.t - self.delta_t)
+                       np.pi * self.bw * (self.t - self.delta_t)**2 / self.tp \
+                       + 2 * np.pi * self.delta_f * (self.t - self.delta_t)
 
         elif self.FM == "sech":
-            if B is None:
-                B = 10.6/self.tp
-            self.B = B
 
             # phase calculated from instantaneous frequency integral
             # instant_freq = 0.5 * bw * tanh(B*t);
             # instant_phase_integral = 0.5 * bw * (1/B) * log(cosh(B * (t)))
+
             self.ph = self.phi0 + \
-                np.pi * self.bw * (1/self.B) * \
-                np.log(np.cosh(self.B * (self.t - self.delta_t))) + \
+                np.pi * self.bw * (self.tp/self.B) * \
+                np.log(np.cosh(self.B * (self.t - self.delta_t) / self.tp)) + \
                 2 * np.pi * self.delta_f * (self.t - self.delta_t)
 
         elif self.FM is None:
