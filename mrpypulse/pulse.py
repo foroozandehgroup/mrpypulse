@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-# TODO add Random()
-
 
 class Pulse:
 
@@ -597,26 +595,58 @@ class Pulse:
         self.ph = np.angle(y_t2, deg=True) % 360
 
 
+class Random(Pulse):
+
+    """
+    Class representing a random pulse
+
+    Parameters
+    ----------
+        **kwargs
+            arguments to be transmitted to parent classes
+    Returns
+    -------
+    p: pulse object
+        random pulse
+
+    Random pulses have a random number of points between 2 and 1000, a random
+    time resolution and random (uniform) cartesian coordinates between -1 and
+    1.
+    """
+
+    def __init__(self, **kwargs):
+
+        ns = np.random.randint(2, 1000)
+        Pulse.__init__(self,
+                       ns=ns,
+                       tres=np.random.rand(),
+                       x=np.random.uniform(low=-1.0, high=1.0, size=ns),
+                       y=np.random.uniform(low=-1.0, high=1.0, size=ns),
+                       **kwargs)
+
+
 class Hard(Pulse):
 
-    """Class representing a hard pulse."""
+    """
+    Class representing a hard pulse.
+
+    Parameters
+    ----------
+    tp : float
+        cf. Pulse
+    w1 : float
+        cf. Pulse
+    **kwargs
+        other arguments to be transmitted to parent classes
+
+    A hard pulse is defined as a 2 points pulse
+
+    # TO DO: require testing
+    """
 
     def __init__(self, tp, w1, **kwargs):
-        """
-        Parameters
-        ----------
-        tp : float
-            cf. Pulse
-        w1 : float
-            cf. Pulse
-        **kwargs
-            other arguments to be transmitted to parent classes
 
-        A hard pulse is defined as a 2 points pulse
-
-        # TO DO: require testing
-        """
-        # TOD execution should raise an error
+        # TODO execution should raise an error
         Pulse.__init__(self, tp=tp, ns=2,
                        r=np.array([w1, w1]), ph=np.array([0, 0]),
                        **kwargs)

@@ -6,56 +6,37 @@ import sys
 sys.path.append('..')
 
 
-def random_pulse():
-    """Generates a random pulse
-    Returns
-    -------
-    p: pulse object
-        random pulse
-    """
-    ns = np.random.randint(2, 1000)
-    x = np.random.uniform(low=-1.0, high=1.0, size=ns)
-    y = np.random.uniform(low=-1.0, high=1.0, size=ns)
-    tres = np.random.rand()
-    return pulse.Pulse(x=x, y=y, ns=ns, tres=tres)
-
-
 def test_pulse_init():
-    # random pulse parameters
-    ns = np.random.randint(2, 1000)
-    x = np.random.uniform(low=-1.0, high=1.0, size=ns)
-    y = np.random.uniform(low=-1.0, high=1.0, size=ns)
-    tres = np.random.rand()
 
-    p1 = pulse.Pulse(x=x, y=y, ns=ns, tres=tres)
+    p1 = pulse.Random()
 
     # assert np/tres/tp produce same output
-    tp = ns * tres
-    p2 = pulse.Pulse(x=x, y=y, tp=tp, tres=tres)
-    p3 = pulse.Pulse(x=x, y=y, ns=ns, tp=tp)
+    tp = p1.ns * p1.tres
+    p2 = pulse.Pulse(x=p1.x, y=p1.y, tp=tp, tres=p1.tres)
+    p3 = pulse.Pulse(x=p1.x, y=p1.y, ns=p1.ns, tp=tp)
     assert p1 == p2 == p3
 
     with pytest.raises(TypeError):
-        p4 = pulse.Pulse(x=x, y=y, tres=tres, ns=ns, tp=tp)
+        p4 = pulse.Pulse(x=p1.x, y=p1.y, tres=p1.tres, ns=p1.ns, tp=p1.tp)
 
     with pytest.raises(TypeError):
-        p4 = pulse.Pulse(x=x, y=y, tres=tres)
+        p4 = pulse.Pulse(x=p1.x, y=p1.y, tres=p1.tres)
 
     # assert x/y and r/ph produce same output
-    r = np.sqrt(x**2 + y**2)
-    ph = np.arctan2(y, x)
-    p4 = pulse.Pulse(r=r, ph=ph, ns=ns, tres=tres)
+    r = np.sqrt(p1.x**2 + p1.y**2)
+    ph = np.arctan2(p1.y, p1.x)
+    p4 = pulse.Pulse(r=r, ph=ph, ns=p1.ns, tres=p1.tres)
     assert p1 == p4
 
     with pytest.raises(TypeError):
-        p5 = pulse.Pulse(x=x, y=y, r=r, ns=ns, tres=tres)
+        p5 = pulse.Pulse(x=p1.x, y=p1.y, r=p1.r, ns=p1.ns, tres=p1.tres)
 
     with pytest.raises(TypeError):
-        p5 = pulse.Pulse(x=x, ns=ns, tres=tres)
+        p5 = pulse.Pulse(x=p1.x, ns=p1.ns, tres=p1.tres)
 
 
 def test_pulse_setattr():
-    p1 = random_pulse()
+    p1 = pulse.Random()
     p2 = copy.deepcopy(p1)
 
     # assert phi0 change
@@ -91,7 +72,7 @@ def test_pulse_setattr():
 
 
 def test_pulse_radd():
-    p1 = random_pulse()
+    p1 = pulse.Random()
     p2 = copy.deepcopy(p1)
     p3 = p1 + p2
     assert np.allclose(p3.x, p1.x+p2.x, rtol=1e-6, atol=1e-15)
@@ -101,7 +82,7 @@ def test_pulse_radd():
 
 
 def test_pulse_add_ph_polyfit():
-    p1 = random_pulse()
+    p1 = pulse.Random()
     p2 = copy.deepcopy(p1)
     scale_ph = 2*np.random.rand()
     ph = np.random.uniform(low=-1.0, high=1.0, size=int(scale_ph * p1.ns))
