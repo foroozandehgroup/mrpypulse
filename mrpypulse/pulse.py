@@ -816,7 +816,7 @@ class Parametrized(Shape):
     delta_f: float
         frequency offset (by default 0, correspond to a centred FM)
     n: float
-        smoothing index for WURST or superGaussian AM (default, 80 and 40
+        smoothing index for WURST or superGaussian AM (default, 80 and 26
                                                        respectively)
     sm: float
         smoothing percentage for sinsmoothed AM (default, 10)
@@ -949,7 +949,7 @@ class Parametrized(Shape):
 
         elif self.AM == "superGaussian":
             if n is None:
-                n = 40  # default smoothing factor (superGaussian index) n
+                n = 26  # default smoothing factor (superGaussian index)
             self.n = n
             self.r = self.w1 * \
                 np.exp(
@@ -965,20 +965,12 @@ class Parametrized(Shape):
         elif self.AM is None:
             self.r = self.w1 * np.ones(self.ns)
 
-        """
-        TODO
-        # estimation of smoothing percentage sm if possible
-        if self.AM == "WURST" or self.AM == "superGaussian"
-            try:
-                i_sm = 1 # unsmoothed part beginning index
-
-                while self.r(i_sm) < 0.99 * p.w1
-                    i_sm += 1
-                end
-                self.sm = 100 * i_sm / self.ns;
-            catch:
-                print('Smoothing sm could not be computed')
-        """
+        # estimation of smoothing percentage sm
+        if self.AM == "WURST" or self.AM == "superGaussian":
+            i_sm = 0  # unsmoothed part beginning index
+            while self.r[i_sm] < 0.99 * self.w1:
+                i_sm += 1
+            self.sm = 100 * i_sm / self.ns
 
         # phase/frequency modulation
         self.FM = FM

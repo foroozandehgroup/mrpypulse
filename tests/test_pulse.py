@@ -136,6 +136,14 @@ def test_parametrized_init():
 
     assert p7 == p8 == p9 == p10
 
+    # smoothing percentage estimation
+    (am, fm, tr) = ("superGaussian", "chirp", 0.25e-6)
+    p11 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr)
+    assert p11.sm == 10.3
+    (am, fm) = ("WURST", "chirp")
+    p12 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr)
+    assert p12.sm == 10.7
+
     with pytest.raises(TypeError):
         p10 = pulse.Parametrized(AM=None, FM=None, tp=tp, w1=p1.w1, tres=tr)
 
