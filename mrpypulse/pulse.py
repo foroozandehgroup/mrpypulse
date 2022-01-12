@@ -48,8 +48,6 @@ class Pulse:
         end of the pulse
     ID: string
         Identification pulse
-    TODO discuss addition of flip angle +others?
-    TODO empty pulse case
     """
 
     def __init__(self, tp: float = None, ns: int = None, tres: float = None,
@@ -202,8 +200,8 @@ class Pulse:
 
         Parameters
         ----------
-        pulse2sum: pulse object
-            pulse to sum
+        pulse2add: pulse object
+            pulse to add
 
         Returns
         -------
@@ -215,8 +213,6 @@ class Pulse:
         Attribute information from original pulses (such as phase offset)
         is lost.
         """
-        # TODO testing
-        # TODO __rsub__
 
         if not np.isclose(self.tres, pulse2add.tres, rtol=1e-6, atol=1e-12):
             raise ValueError(
@@ -228,14 +224,12 @@ class Pulse:
         end = np.max([self.end, pulse2add.end])
         tp = end - start
         ns = tp/tres
-        # TODO cleaner solution: only use int(), no rounding and catch errors
-        # if too far (not working tho)
+
         if np.modf(ns)[0] > 0.99999:  # account for float type operations
             ns = int(np.ceil(ns))
         else:
             ns = int(np.floor(ns))
 
-        ns = int(ns)
         tres = tp / ns  # tres adjusted for the rouding on n
 
         t = np.linspace(start+tres/2, end-tres/2, ns)
@@ -282,6 +276,88 @@ class Pulse:
             raise ValueError('A pulse object should be added '
                              'to a pulse object.')
 
+    def __sub__(self, pulse2sub):
+        """
+        Pulse substraction operation defined as sum of Cartesian coordinates
+
+        Parameters
+        ----------
+        pulse2sub: pulse object
+            pulse to substract
+
+        Returns
+        -------
+        pulse_sub: pulse object
+            substraction of the pulses at their position
+
+        If the pulses do not overlap, the delay between them is encoded as
+        coordinates of value 0.
+        Attribute information from original pulses (such as phase offset)
+        is lost.
+        """
+
+        if not np.isclose(self.tres, pulse2sub.tres, rtol=1e-6, atol=1e-12):
+            raise ValueError(
+                'Pulses can only be substracted if their tres is the same.')
+
+        # initialization
+        tres = self.tres
+        start = np.min([self.start, pulse2sub.start])
+        end = np.max([self.end, pulse2sub.end])
+        tp = end - start
+        ns = tp/tres
+
+        if np.modf(ns)[0] > 0.99999:  # account for float type operations
+            ns = int(np.ceil(ns))
+        else:
+            ns = int(np.floor(ns))
+
+        tres = tp / ns  # tres adjusted for the rouding on n
+
+        t = np.linspace(start+tres/2, end-tres/2, ns)
+
+        x = np.empty(len(t))
+        y = np.empty(len(t))
+        j = 0  # first pulse index
+        k = 0  # second pulse index
+
+        for i in range(ns):
+
+            x[i] = 0
+            y[i] = 0
+
+            if self.start < t[i] < self.end:
+                x[i] += self.x[j]
+                y[i] += self.y[j]
+                j += 1
+
+            if pulse2sub.start < t[i] < pulse2sub.end:
+                x[i] -= pulse2sub.x[k]
+                y[i] -= pulse2sub.y[k]
+                k += 1
+
+        pulse_sub = Pulse(
+            ns=ns, tp=tp, x=np.array(x), y=np.array(y), start=start)
+
+        return pulse_sub
+
+    def __rsub__(self, object2sub):
+        """
+        Pulse sub for non-pulses objects
+
+        Parameters
+        ----------
+        object2add: object
+            non-pulse object to add
+        Returns
+            self if the object is 0 (allows to use diff on an list of pulses)
+        """
+        if object2sub == 0:
+            return self
+        else:
+            raise ValueError('A pulse object should be substracted '
+                             'to a pulse object.')
+
     def __eq__(self, p):
         """
         Parameters
@@ -309,7 +385,6 @@ class Pulse:
     def __str__(self):
         """
         Convert pulse object to string (typically used by print)
-        TODO take into account empyt pulse?
         """
 
         pulsestr = 'Pulse object with the following attributes\n'
@@ -349,7 +424,6 @@ class Pulse:
             allows to plot ph, its fit and the phase correction
 
         plt.show() might be needed calling the function to reveal the plots.
-
         """
         if start > end:
             raise ValueError('end should be superior to start')
@@ -561,7 +635,6 @@ class Pulse:
         except ImportError:
             print('matlab.engine could not be imported.')
 
-        # TODO test this method
         t = self.t * 1e6
         y_t = self.x + self.y * 1j
         nres = f.size*8
@@ -591,8 +664,8 @@ class Pulse:
         y_t2 = np.real(y_t2) / max(np.real(y_t2)) + \
             1j * np.imag(y_t2) / max(np.imag(y_t2))
 
-        self.r = 100 * abs(y_t2)
-        self.ph = np.angle(y_t2, deg=True) % 360
+        self.r = self.w1 * abs(y_t2)
+        self.ph = np.angle(y_t2)
 
 
 class Random(Pulse):
@@ -602,8 +675,9 @@ class Random(Pulse):
 
     Parameters
     ----------
-        **kwargs
-            arguments to be transmitted to parent classes
+    **kwargs
+        arbitrary keyword arguments (cf. Pulse)
+
     Returns
     -------
     p: pulse object
@@ -637,16 +711,13 @@ class Hard(Pulse):
     w1 : float
         cf. Pulse
     **kwargs
-        other arguments to be transmitted to parent classes
+        arbitrary keyword arguments (cf. Pulse)
 
     A hard pulse is defined as a 2 points pulse
-
-    # TO DO: require testing
     """
 
     def __init__(self, tp, w1, **kwargs):
 
-        # TODO execution should raise an error
         Pulse.__init__(self, tp=tp, ns=2,
                        r=np.array([w1, w1]), ph=np.array([0, 0]),
                        **kwargs)
@@ -666,7 +737,7 @@ class Shape(Pulse):
     bw: float
         bandwidth (Hz)
     **kwargs
-        TODO document **kwargs throughout the code
+        arbitrary keyword arguments (cf. Pulse)
 
     A shaped pulse is a pulse which can be amplitude-modulated (AM) and/or
     frequency-modulated
@@ -754,7 +825,7 @@ class Parametrized(Shape):
     p: float
         smoothing index for Gaussian pulses (default, 5)
     **kwargs
-        other argurments to transmit to parent classes
+        arbitrary keyword arguments (cf. Shape)
 
     Parametrized shaped pulses make use of analytical functions for their
     waveforms.
@@ -973,7 +1044,16 @@ class Parametrized(Shape):
         """
         Parameters
         ----------
-        # TODO
+        start: float
+            start of the polynomial fit (%)
+        end: float
+            stop of the polynomial fit (%)
+        deg: int
+            degree of the polynomial fit
+        plot: boolean
+            allows to plot ph, its fit and the phase correction
+
+        plt.show() might be needed calling the function to reveal the plots.
         """
 
         if start is None:

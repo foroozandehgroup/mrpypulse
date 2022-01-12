@@ -71,13 +71,23 @@ def test_pulse_setattr():
     assert p1 == p2
 
 
-def test_pulse_radd():
+def test_pulse_add():
     p1 = pulse.Random()
     p2 = copy.deepcopy(p1)
     p3 = p1 + p2
     assert np.allclose(p3.x, p1.x+p2.x, rtol=1e-6, atol=1e-15)
     assert not np.isclose(p3.w1, p1.w1, rtol=1e-6, atol=1e-15)
     p1 += p2
+    assert p1 == p3
+
+
+def test_pulse_sub():
+    p1 = pulse.Random()
+    p2 = copy.deepcopy(p1)
+    p3 = p1 - p2
+    assert np.allclose(p3.x, p1.x-p2.x, rtol=1e-6, atol=1e-15)
+    assert not np.isclose(p3.w1, p1.w1, rtol=1e-6, atol=1e-15)
+    p1 -= p2
     assert p1 == p3
 
 
@@ -89,6 +99,16 @@ def test_pulse_add_ph_polyfit():
     ph_corr = p1.add_ph_polyfit(ph)
     p2.ph += ph_corr
     assert p1 == p2
+
+
+def test_hard_init():
+    p1 = pulse.Hard(14e-6, 30e3)
+    p2 = pulse.Pulse(tp=14e-6, ns=2,
+                     r=np.array([30e3, 30e3]), ph=np.array([0, 0]))
+    assert p1 == p2
+
+    p1.w1 = 15e3
+    assert p1 != p2
 
 
 def test_parametrized_init():
