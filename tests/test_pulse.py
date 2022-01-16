@@ -113,7 +113,7 @@ def test_hard_init():
 
 def test_parametrized_init():
     # assert chirped pulses Q, w1, tp, bw equivalence
-    (am, fm, tr, tp, Q, bw) = ("WURST", "chirp", 0.5e-6, 500e-6, 5, 300e3)
+    (am, fm, tr, tp, Q, bw) = ("WURST", "chirp", 1e-6, 500e-6, 5, 300e3)
     p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr)
     p2 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, w1=p1.w1, tres=tr)
     p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, bw=bw, w1=p1.w1, tres=tr)
@@ -133,7 +133,6 @@ def test_parametrized_init():
     p8 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, w1=p7.w1, tres=tr, B=B)
     p9 = pulse.Parametrized(AM=am, FM=fm, tp=tp, bw=bw, w1=p7.w1, tres=tr, B=B)
     p10 = pulse.Parametrized(AM=am, FM=fm, Q=Q, bw=bw, w1=p7.w1, tres=tr, B=B)
-
     assert p7 == p8 == p9 == p10
 
     # smoothing percentage estimation
@@ -148,9 +147,104 @@ def test_parametrized_init():
         p10 = pulse.Parametrized(AM=None, FM=None, tp=tp, w1=p1.w1, tres=tr)
 
 
+def test_parametrized_setattr():
+    # assert delta_t change
+    (am, fm, tr, tp, Q, bw) = \
+        ("Gaussian", "chirp", 2e-6, 480e-6, 3.7, 356.5e3)
+    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr)
+    p2 = copy.deepcopy(p1)
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr,
+                            start=p1.start + 500e-6)
+    p1.delta_t += 500e-6
+    assert p1.start == 500e-6 and p1 == p3
+    p1.delta_t -= 250e-6
+    p1.delta_t -= 250e-6
+    assert p1 == p2
+
+    # assert Q change
+    p1.Q += 1.3
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=p1.Q, bw=bw, tres=tr)
+    assert p1 == p3 and p1.w1 == p3.w1
+    p1.Q -= 1.3
+    assert p1 == p2 and p1.w1 == p2.w1
+
+    # assert bw change
+    p1.bw += 50e3
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=p1.bw, tres=tr)
+    assert p1 == p3 and p1.w1 == p3.w1
+    p1.bw -= 50e3
+    assert p1 == p2 and p1.w1 == p2.w1
+
+    # assert w1 change
+    p1.w1 += 5e3
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, w1=p1.w1, bw=bw, tres=tr)
+    assert p1 == p3 and p1.Q == p3.Q
+    p1.w1 -= 5e3
+    assert p1 == p2 and p1.Q == p2.Q
+
+    # assert p change
+    p1.p += 1
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, w1=p1.w1, bw=bw, tres=tr,
+                            p=p1.p)
+    assert p1 == p3
+    p1.p -= 1
+    assert p1 == p2
+
+    # assert n change
+    am = "WURST"
+    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr)
+    p2 = copy.deepcopy(p1)
+    p1.n += 16
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, w1=p1.w1, bw=bw, tres=tr,
+                            n=p1.n)
+    assert p1 == p3 and p1.sm == p3.sm
+    p1.n -= 16
+    assert p1 == p2 and p1.sm == p2.sm
+    am = "superGaussian"
+    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr)
+    p2 = copy.deepcopy(p1)
+    p1.n += 16
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, w1=p1.w1, bw=bw, tres=tr,
+                            n=p1.n)
+    assert p1 == p3 and p1.sm == p3.sm
+    p1.n -= 16
+    assert p1 == p2 and p1.sm == p2.sm
+
+    # assert sm change
+    am = "sinsmoothed"
+    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr)
+    p2 = copy.deepcopy(p1)
+    p1.sm += 5
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr,
+                            sm=p1.sm)
+    assert p1 == p3
+    p1.sm -= 5
+    assert p1 == p2
+
+    # assert B change
+    (am, fm) = ("sech", "sech")
+    p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr)
+    p2 = copy.deepcopy(p1)
+    p1.B += 2.4
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, w1=p1.w1, bw=bw, tres=tr,
+                            B=p1.B)
+    assert p1 == p3 and p1.Q == p3.Q
+    p1.B -= 2.4
+    assert p1 == p2  # and p1.Q == p2.Q  # close but fails due - w1 change TODO
+
+    # assert delta_f change
+    p1.delta_f += 500
+    p3 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tr,
+                            delta_f=500)
+    assert p1 == p3
+    p1.delta_f -= 250
+    p1.delta_f -= 250
+    assert p1 == p2
+
+
 def test_parametrized_str():
     (am, fm, tres, tp, Q, bw) = \
-        ("sinsmoothed", "chirp", 0.5e-6, 500e-6, 5, 300e3)
+        ("sinsmoothed", "chirp", 1e-6, 856e-6, 6.74, 857.3e3)
     p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tres)
     p2 = copy.deepcopy(p1)
     assert str(p1) == str(p2)
@@ -158,7 +252,7 @@ def test_parametrized_str():
 
 def test_parametrized_reverse_sweep():
     (am, fm, tres, tp, Q, bw) = \
-        ("superGaussian", "chirp", 0.5e-6, 500e-6, 5, 300e3)
+        ("superGaussian", "chirp", 0.3e-6, 400e-6, 2.61, 1152e3)
     p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tres)
     p2 = copy.deepcopy(p1)
     p1.reverse_sweep()
@@ -170,7 +264,7 @@ def test_parametrized_reverse_sweep():
 
 def test_parametrized_add_ph_polyfit():
     (am, fm, tres, tp, Q, bw) = \
-        ("sinsmoothed", "chirp", 0.5e-6, 500e-6, 5, 300e3)
+        ("sinsmoothed", "chirp", 0.2e-6, 417e-6, 0.512, 470e3)
     p1 = pulse.Parametrized(AM=am, FM=fm, tp=tp, Q=Q, bw=bw, tres=tres)
     p2 = copy.deepcopy(p1)
 

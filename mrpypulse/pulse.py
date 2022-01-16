@@ -143,24 +143,23 @@ class Pulse:
 
         # already initialized special cases
         if name == 'w1' and hasattr(self, 'w1'):
-            # scale coordinates (calls __setattr__ recursively)
-            self.r = value * self.r/max(self.r)
+            object.__setattr__(self, 'r', value * self.r/self.w1)
+            object.__setattr__(self, 'x', self.r * np.cos(self.ph))
+            object.__setattr__(self, 'y', self.r * np.sin(self.ph))
+
         elif name == 'phi0' and hasattr(self, 'phi0'):
             # reset phi0 on ph
             object.__setattr__(self, 'ph', self.ph - self.phi0)
 
         elif name == 'start' and hasattr(self, 'start'):
             object.__setattr__(self, 'end', value + self.tp)
-            object.__setattr__(
-                self, 't',
-                np.linspace(value+self.tres/2, self.end-self.tres/2, self.ns))
+            object.__setattr__(self, 't', np.linspace(
+                        value+self.tres/2, self.end-self.tres/2, self.ns))
 
         elif name == 'end' and hasattr(self, 'end'):
             object.__setattr__(self, 'start', value - self.tp)
-            object.__setattr__(
-                self, 't',
-                np.linspace(
-                    self.start+self.tres/2, value-self.tres/2, self.ns))
+            object.__setattr__(self, 't', np.linspace(
+                        self.start+self.tres/2, value-self.tres/2, self.ns))
 
         elif name == 't' and hasattr(self, 't'):
             object.__setattr__(self, 'start', value[0] - self.tres/2)
@@ -170,15 +169,22 @@ class Pulse:
             if len(value) != self.ns:
                 raise ValueError('t should has a different number of point.')
 
-        # TODO tres/ns/tp modification and how they would affect each other
-        # e.g.
-        #   - tres -> modif np [requires interpolation]?
-        #   - tp -> lower tres and no ns modif? +modify t/end
-        #   - ns -> modif tres? [requires interpolation]?
+        elif name == 'tp' and hasattr(self, 'tp'):
+            # if supported, it should modify ns
+            raise AttributeError('tp modification not supported.')
+
+        elif name == 'tres' and hasattr(self, 'tres'):
+            # if supported, it should modify tres
+            raise AttributeError('tres modification not supported.')
+
+        elif name == 'ns' and hasattr(self, 'ns'):
+            # if suppported, it should modify tres
+            raise AttributeError('ns modification not supported.')
 
         # set attribute value
         object.__setattr__(self, name, value)
 
+        # participates to __init__
         if name in ('ph', 'r') and hasattr(self, 'r') and hasattr(self, 'ph'):
             object.__setattr__(self, 'x', self.r * np.cos(self.ph))
             object.__setattr__(self, 'y', self.r * np.sin(self.ph))
@@ -792,6 +798,53 @@ class Shape(Pulse):
             raise AttributeError('No sweep to be reversed (FM=None).')
 
 
+def w1_HS(tp, bw, Q, B):
+    """
+    Returns the w1 frequency for Parametrized HS pulse
+    """
+    return np.sqrt(bw * Q * B / (4 * np.pi * tp))
+
+
+def w1_chirp(tp, bw, Q):
+    """
+    Returns the w1 frequency for Parametrized chirped pulse
+    """
+    return np.sqrt(bw * Q / (2 * np.pi * tp))
+
+
+def ph_HS(t, tp, bw, B, delta_t, delta_f, phi0):
+    """
+    Returns the phase ph for Parametrized HS pulse
+    """
+
+    # phase calculated from instantaneous frequency integral
+    # instant_freq = (bw/2) * tanh(B*t);
+    # instant_phase_integral = (bw/2B) * log(cosh(B * (t)))
+
+    # no np.sech() - using sech = 1/cosh
+    ph = phi0 + \
+        np.pi * bw * (tp/B) * np.log(np.cosh(B * (t - delta_t) / tp)) + \
+        2 * np.pi * delta_f * (t - delta_t)
+
+    return ph
+
+
+def ph_chirp(t, tp, bw, delta_t, delta_f, phi0):
+    """
+    Returns the phase ph for Parametrized chirped pulse
+    """
+
+    # phase calculated from instantaneous frequency
+    # d(phase)/dt = sweep_rate * t + f0 (= instant. phase.)
+    # sweep_rate = bw / tp;
+    # instant_phase_integral = (sweep_rate * t**2) / 2 + f0 * t;
+
+    ph = phi0 + np.pi * bw * (t - delta_t)**2 / tp + \
+        2 * np.pi * delta_f * (t - delta_t)
+
+    return ph
+
+
 class Parametrized(Shape):
 
     """
@@ -807,10 +860,10 @@ class Parametrized(Shape):
         sech
     tp: float
         cf. Pulse
-    bw: float
-        cf. Shape
     w1: float
         cf. Pulse
+    bw: float
+        cf. Shape
     Q: float
         adiabaticity factor of the pulse
     delta_f: float
@@ -831,31 +884,34 @@ class Parametrized(Shape):
     waveforms.
     Exactly 3 of tp, bw, w1 and Q should be used to creat a parametrized shaped
     pulse which is frequency modulated.
+    Use the parameters to modify the waveforms, in particular only w1 to scale
+    cooordinates.
     """
 
     def __init__(self, AM: str = "sinsmoothed", FM: str = "chirp",
-                 tp: float = None, bw: float = None, w1: float = None,
+                 tp: float = None, w1: float = None, bw: float = None,
                  Q: float = None, delta_f: float = 0,
-                 n: int = None, sm: float = None, B: float = None,
-                 p: float = None, **kwargs):
+                 p: float = None, n: int = None, sm: float = None,
+                 B: float = None, **kwargs):
 
         if FM is not None:
 
             if FM == "chirp":
-                if w1 is None and bw is not None and \
-                        tp is not None and Q is not None:
-                    w1 = np.sqrt(bw * Q / (2 * np.pi * tp))
 
-                elif tp is None and bw is not None and \
-                        Q is not None and w1 is not None:
+                if tp is None and w1 is not None and \
+                        bw is not None and Q is not None:
                     tp = bw * Q / (2 * np.pi * w1**2)
 
-                elif bw is None and tp is not None and \
-                        Q is not None and w1 is not None:
+                elif w1 is None and bw is not None and \
+                        Q is not None and tp is not None:
+                    w1 = np.sqrt(bw * Q / (2 * np.pi * tp))
+
+                elif bw is None and Q is not None and \
+                        w1 is not None and tp is not None:
                     bw = w1**2 * 2 * np.pi * tp / Q
 
-                elif Q is None and bw is not None and \
-                        tp is not None and w1 is not None:
+                elif Q is None and tp is not None and \
+                        w1 is not None and bw is not None:
                     Q = w1**2 * 2 * np.pi * tp / bw
 
                 else:
@@ -866,22 +922,21 @@ class Parametrized(Shape):
 
                 if B is None:
                     B = 10.6
-                self.B = B
 
-                if w1 is None and bw is not None and \
-                        tp is not None and Q is not None:
-                    w1 = np.sqrt(bw * Q * B / (4 * np.pi * tp))
-
-                elif tp is None and bw is not None and \
-                        Q is not None and w1 is not None:
+                if tp is None and w1 is not None and \
+                        bw is not None and Q is not None:
                     tp = bw * Q * B / (4 * np.pi * w1**2)
 
-                elif bw is None and tp is not None and \
-                        Q is not None and w1 is not None:
+                elif w1 is None and bw is not None and \
+                        Q is not None and tp is not None:
+                    w1 = np.sqrt(bw * Q * B / (4 * np.pi * tp))
+
+                elif bw is None and Q is not None and \
+                        w1 is not None and tp is not None:
                     bw = 4 * np.pi * tp * w1**2 / (Q * B)
 
-                elif Q is None and bw is not None and \
-                        tp is not None and w1 is not None:
+                elif Q is None and tp is not None and \
+                        w1 is not None and bw is not None:
                     Q = 4 * np.pi * tp * w1**2 / (bw * B)
 
                 else:
@@ -903,37 +958,174 @@ class Parametrized(Shape):
 
         Shape.__init__(self, AM=AM, FM=FM, bw=bw, tp=tp, **kwargs)
 
-        # frequency offset
-        self.delta_f = delta_f
-
         # position delta_t
         self.delta_t = self.start + self.tp/2
 
         # amplitude modulation
         self.AM = AM
+        # phase/frequency modulation
+        self.FM = FM
+        # frequency offset
+        self.delta_f = delta_f
+
+        if self.AM is None:
+            self.r = self.w1 * np.ones(self.ns)
+
+        elif self.AM == "Gaussian":
+            if p is None:
+                p = 5
+            self.p = p
+
+        elif self.AM == "superGaussian":
+            if n is None:
+                n = 26  # default smoothing factor (superGaussian index)
+            self.n = n
+
         if self.AM == "WURST":
             if n is None:
                 n = 80  # default smoothing index value
             self.n = n
-
-            self.r = self.w1 * (1 - np.abs(np.sin(
-                     (np.pi * (self.t - self.delta_t)) / self.tp))**self.n)
-
-        elif self.AM == "sech":
-            if B is None:
-                B = 10.6
-            self.B = B
-
-            # no np.sech() - using sech = 1/cosh
-            self.r = self.w1 * 1/np.cosh(self.B*(self.t-self.delta_t)/self.tp)
 
         elif self.AM == "sinsmoothed":
             if sm is None:
                 sm = 10  # default smoothing percentage value
             self.sm = sm
 
+        elif self.AM == "sech":
+            if B is None:
+                B = 10.6
+            self.B = B
+
+        if self.FM == "chirp":
+            self.ph = ph_chirp(self.t, self.tp, self.bw,
+                               self.delta_t, self.delta_f, self.phi0)
+
+        elif self.FM == "sech":
+            if self.AM != "sech":
+                if B is None:
+                    B = 10.6
+                self.B = B
+
+        elif self.FM is None:
+            self.ph = self.phi0 * np.ones(self.ns)
+
+    def __setattr__(self, name, value):
+        """
+        Handles multiple attributes modification when one attribute is modified
+
+        Set up the attribute identified by name with value. Attributes which
+        causes other modifications (cf. __setattr__ for pulse for other
+                                    modified attributes):
+        delta_t:
+            start update
+        Q:
+            w1 update
+        tp:
+            not supported
+        bw:
+            w1 update
+        w1:
+            Q update
+        delta_f:
+            ph update
+        n (AM = superGaussian and WURST):
+            r update
+        sm (AM = sinsmoothed):
+            r update
+        p (AM = Gaussian)
+            r update
+        B (AM or FM = sech):
+            Q, r, ph update
+
+        Particular conditions are set up to take into account the calls made in
+        __init__
+        Modification of parameters linked to the waveform are likely to destroy
+        possible tweaks that were made on it (e.g. with add_ph_polyfit).
+        """
+
+        # beware of recursive calls when reading the code!
+        if name == 'delta_t' and hasattr(self, 'delta_t'):
+            self.start = value - self.tp/2
+
+        elif name == 'Q' and hasattr(self, 'Q'):
+            if self.FM == "chirp":
+                Pulse.__setattr__(self, 'w1',
+                                  w1_chirp(self.tp, value, self.bw))
+            elif self.FM == "sech":
+                Pulse.__setattr__(self, 'w1',
+                                  w1_HS(self.tp, value, self.bw, self.B))
+
+        elif name == 'tp' and hasattr(self, 'tp'):
+            # tp modification would require to adjust:
+            # coordinates length and value, t, w1, delta_t...
+            # redundant with pulse error raise in Pulse
+            raise AttributeError('tp modification not supported.')
+
+        elif name == 'bw' and hasattr(self, 'bw'):
+            if self.FM == "chirp":
+                Pulse.__setattr__(self, 'w1',
+                                  w1_chirp(self.tp, value, self.Q))
+                self.ph = ph_chirp(self.t, self.tp, value,
+                                   self.delta_t, self.delta_f, self.phi0)
+            elif self.FM == "sech":
+                Pulse.__setattr__(self, 'w1',
+                                  w1_HS(self.tp, value, self.Q, self.B))
+                self.ph = ph_HS(self.t, self.tp, value, self.B,
+                                self.delta_t, self.delta_f, self.phi0)
+
+        elif name == 'w1' and hasattr(self, 'w1'):
+            if self.FM == "chirp":
+                # avoid calling __setattr__ recursively
+                object.__setattr__(self, 'Q',
+                                   value**2*2*np.pi*self.tp/self.bw)
+            elif self.FM == "sech":
+                object.__setattr__(self, 'Q',
+                                   4*np.pi*self.tp*value**2/(self.bw*self.B))
+
+        elif name == 'delta_f' and hasattr(self, 'delta_f'):
+            if self.FM == "chirp":
+                self.ph = ph_chirp(self.t, self.tp, self.bw,
+                                   self.delta_t, value, self.phi0)
+
+            elif self.FM == "sech":
+                self.ph = ph_HS(self.t, self.tp, self.bw, self.B,
+                                self.delta_t, value, self.phi0)
+
+        # store w1 value
+        if name in ('r', 'x', 'y') and hasattr(self, 'w1'):
+            w1 = self.w1
+
+        # set attribute value
+        Pulse.__setattr__(self, name, value)
+
+        # reverse automatic modification of w1 by Pulse __setattr__
+        if name in ('r', 'x', 'y') and hasattr(self, 'w1'):
+            object.__setattr__(self, 'w1', w1)
+
+        # used in __init__
+        if name == 'p' and hasattr(self, 'p'):
+            self.r = self.w1 * np.exp(
+                                -value*((self.t-self.delta_t)/self.tp)**2)
+
+        elif name == 'n' and hasattr(self, 'n'):
+            if self.AM == "superGaussian":
+                self.r = self.w1 * np.exp(
+                            -2**(self.n + 2) *
+                            ((self.t - self.delta_t) / self.tp)**value)
+
+            elif self.AM == "WURST":
+                self.r = self.w1 * (1 - np.abs(np.sin(
+                      (np.pi * (self.t - self.delta_t)) / self.tp))**value)
+
+            # estimation of smoothing percentage sm
+            i_sm = 0  # unsmoothed part beginning index
+            while self.r[i_sm] < 0.99 * self.w1:
+                i_sm += 1
+            object.__setattr__(self, 'sm', 100 * i_sm / self.ns)
+
+        elif name == 'sm' and hasattr(self, 'sm') and self.AM == "sinsmoothed":
             # number of points smoothed
-            n_sm = int(np.floor((self.ns * self.sm) / 100))
+            n_sm = int(np.floor((self.ns * value) / 100))
 
             # number of points unsmoothed
             n_unsm = int(self.ns - (2 * n_sm))
@@ -947,70 +1139,23 @@ class Parametrized(Shape):
                                      unsmoothed_middle,
                                      np.flip(smoothed_side)))
 
-        elif self.AM == "superGaussian":
-            if n is None:
-                n = 26  # default smoothing factor (superGaussian index)
-            self.n = n
-            self.r = self.w1 * \
-                np.exp(
-                    -2**(self.n + 2) *
-                    ((self.t - self.delta_t) / self.tp)**self.n)
+        elif name == 'B' and hasattr(self, 'B'):
 
-        elif self.AM == "Gaussian":
-            if p is None:
-                p = 5
-            self.p = p
-            self.r = self.w1 * np.exp(-p*((self.t-self.delta_t)/self.tp)**2)
+            if self.AM == "sech":
 
-        elif self.AM is None:
-            self.r = self.w1 * np.ones(self.ns)
+                self.r = self.w1 * 1/np.cosh(
+                    value*(self.t-self.delta_t)/self.tp)
 
-        # estimation of smoothing percentage sm
-        if self.AM == "WURST" or self.AM == "superGaussian":
-            i_sm = 0  # unsmoothed part beginning index
-            while self.r[i_sm] < 0.99 * self.w1:
-                i_sm += 1
-            self.sm = 100 * i_sm / self.ns
+            if self.FM == "sech":
 
-        # phase/frequency modulation
-        self.FM = FM
-        if self.FM is None:
-            self.ph = np.zeros(self.ns)
+                if hasattr(self, 'ph'):
+                    if self.ph is not None:
+                        object.__setattr__(self, 'Q',
+                                           4 * np.pi * self.tp *
+                                           self.w1**2 / (self.bw * value))
 
-        elif self.FM == "chirp":
-            # phase calculated from instantaneous frequency
-            # d(phase)/dt = sweep_rate * t + f0 (= instant. phase.)
-            # sweep_rate = bw / tp;
-            # instant_phase_integral = (sweep_rate * t**2) / 2 + f0 * t;
-
-            self.ph = self.phi0 + \
-                       np.pi * self.bw * (self.t - self.delta_t)**2 / self.tp \
-                       + 2 * np.pi * self.delta_f * (self.t - self.delta_t)
-
-        elif self.FM == "sech":
-
-            # phase calculated from instantaneous frequency integral
-            # instant_freq = 0.5 * bw * tanh(B*t);
-            # instant_phase_integral = 0.5 * bw * (1/B) * log(cosh(B * (t)))
-
-            self.ph = self.phi0 + \
-                np.pi * self.bw * (self.tp/self.B) * \
-                np.log(np.cosh(self.B * (self.t - self.delta_t) / self.tp)) + \
-                2 * np.pi * self.delta_f * (self.t - self.delta_t)
-
-        elif self.FM is None:
-            self.ph = self.phi0 * np.ones(self.ns)
-
-    def __setattr__(self, name, value):
-        """
-        """
-        # TODO delta_t modif
-        # TODO other modifs with constructor?
-        # TODO: tres/tp/ns -> modify them differntly
-        # (no need to interpolate but would destroy pulse tweaks)
-
-        # set attribute value
-        Pulse.__setattr__(self, name, value)
+                self.ph = ph_HS(self.t, self.tp, self.bw, value,
+                                self.delta_t, self.delta_f, self.phi0)
 
     def __str__(self):
         """
