@@ -7,7 +7,6 @@ sys.path.append('..')
 
 
 def test_pulse_init():
-
     p1 = pulse.Random()
 
     # assert np/tres/tp produce same output
@@ -99,6 +98,15 @@ def test_pulse_add_ph_polyfit():
     ph_corr = p1.add_ph_polyfit(ph)
     p2.ph += ph_corr
     assert p1 == p2
+
+
+def test_nopulse_init():
+    # assert np/tres/tp produce same output
+    p1 = pulse.NoPulse(ns=np.random.randint(2, 1000), tres=np.random.rand())
+    tp = p1.ns * p1.tres
+    p2 = pulse.NoPulse(tp=tp, tres=p1.tres)
+    p3 = pulse.NoPulse(ns=p1.ns, tp=tp)
+    assert p1 == p2 == p3
 
 
 def test_hard_init():

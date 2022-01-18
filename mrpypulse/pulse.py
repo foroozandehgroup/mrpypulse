@@ -59,23 +59,6 @@ class Pulse:
         else:
             self.ID = 'unnamed_pulse'
 
-        if x is None and y is None and r is None and ph is None:
-            # no coordinates (empty pulse)
-            pass
-        elif x is None and y is None and r is not None and ph is not None:
-            self.r = r
-            self.ph = ph
-            if len(r) != len(ph):
-                raise ValueError('r and ph should have the same length')
-        elif x is not None and y is not None and r is None and ph is None:
-            self.x = x
-            self.y = y
-            if len(x) != len(y):
-                raise ValueError('x and y should have the same length')
-        else:
-            raise TypeError('Coordinates should be input as'
-                            ' either x and y or r and ph.')
-
         if tres is None and tp is not None and ns is not None:
             self.tp = tp
             self.ns = ns
@@ -95,6 +78,24 @@ class Pulse:
             self.tres = tp / self.ns  # tres adjusted for the rouding on ns
         else:
             raise TypeError('Exactly 2 of tp, ns and tres should be used.')
+
+        if x is None and y is None and r is None and ph is None:
+            # no coordinates
+            pass
+        elif x is None and y is None and r is not None and ph is not None:
+            self.r = r
+            self.ph = ph
+            if len(r) != len(ph):
+                raise ValueError('r and ph should have the same length')
+        elif x is not None and y is not None and r is None and ph is None:
+            self.x = x
+            self.y = y
+            if len(x) != len(y):
+                raise ValueError('x and y should have the same length')
+        else:
+            raise TypeError('Coordinates should be input as'
+                            ' either x and y or r and ph.')
+
         self.phi0 = phi0
 
         if self.ns > 10000:
@@ -672,6 +673,29 @@ class Pulse:
 
         self.r = self.w1 * abs(y_t2)
         self.ph = np.angle(y_t2)
+
+
+class NoPulse(Pulse):
+    """
+    Class representing no pulse
+
+    Parameters
+    ----------
+    **kwargs
+        arbitrary keyword arguments (cf. Pulse)
+
+    Returns
+    -------
+    p: pulse object
+        pulse with coordinates of values 0
+    """
+
+    def __init__(self, **kwargs):
+
+        Pulse.__init__(self, **kwargs)
+        self.x = np.zeros(self.ns)
+        self.y = np.zeros(self.ns)
+        self.w1 = 0
 
 
 class Random(Pulse):
