@@ -580,7 +580,7 @@ class Pulse:
             "JCAMP-DX= 5.00 Bruker JCAMP library",
             "DATA TYPE= Shape Data",
             "ORIGIN= Bruker BioSpin GmbH",
-            "OWNER= <M.FOROOZANDEH>",
+            "OWNER= Mr. Py Pulse",
             f"DATE= {time.strftime('%d-%b-%Y')}",
             f"TIME= {time.strftime('%H:%M:%S')}",
             f"$SHAPE_PARAMETERS= Length of Pulse [msec] {str(self.tp*1e3)}",
@@ -1234,20 +1234,3 @@ class Parametrized(Shape):
                                          plot=plot)
 
         return ph_corr
-
-
-class OCT(Shape):
-
-    """Class representing a Optimizal Control Theory (OCT) pulse - could be
-    implemented in the future"""
-
-    def __init__(self, algo=None, B1_range=None, **kwargs):
-        Shape.__init__(self, **kwargs)
-
-
-class Composite(Shape):
-
-    """Class representing a composite pulse - could be implemented in the
-    future"""
-
-    pass

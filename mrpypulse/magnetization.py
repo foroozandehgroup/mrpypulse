@@ -1,12 +1,4 @@
-
-"""
-
-This module contains functions for simulation purposes.
-
-simulate uses rx0, ry0, rz0 and rtot0 imported from old JB project
-simualte2 uses the functions developped by Ali (currently not working)
-
-"""
+"""This module contains functions for simulation purposes."""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,19 +21,10 @@ def simulate(pulses, off=None, tend=None, pc=None):
 
     Returns
     -------
-    magn: ndarray
-        ndarray containing the magnetisation across the spectral width
     off: ndarray
         if no offset is input, the generated offsets are output
-
-    TODO additional parameters
-    nspins:
-        if off=None
-    B1: numpy array of floats
-        B1 values to simulation
-    magn_init: numpy array of floats
-        initial magnetization
-    TODO single pulse case?
+    magn: ndarray
+        ndarray containing the magnetisation across the spectral width
     """
     return_off = False
     if off is None:
@@ -63,8 +46,6 @@ def simulate(pulses, off=None, tend=None, pc=None):
     for phase in range(npc):
         for o in range(noff):
 
-            # TODO: add option to start with different magentization vector
-
             # default: magnetization on z
             M = np.array([0, 0, 1])
 
@@ -73,8 +54,6 @@ def simulate(pulses, off=None, tend=None, pc=None):
                 M = np.dot(rz(2 * np.pi * off[o] * pulses[0].start), M)
 
             for i, p in enumerate(pulses):
-                # if off[o]==0:
-                #     print(pc[i,phase])
 
                 # vectorized rotational matrix (contains all the pulse points)
                 p_rtot = rtot(p.r, off[o], pc[i, phase] + p.ph, p.tres)
@@ -86,7 +65,7 @@ def simulate(pulses, off=None, tend=None, pc=None):
                 # potential delay between pulses
                 if i < len(pulses) - 1:
 
-                    if p.end < pulses[i+1].start:  # TODO np.isclose
+                    if p.end < pulses[i+1].start:
                         M = np.dot(rz(
                             2 * np.pi * off[o] * (pulses[i+1].start-p.end)),
                             M)
@@ -118,8 +97,6 @@ def magn_phase(magn):
     -------
     phase: 1D numpy array of floats
         phase of the magnetisation
-
-    # TODO non 1D case
     """
     return np.unwrap(np.angle(magn[1, :] + 1j * magn[0, :]))
 
@@ -273,394 +250,3 @@ def rtot(omega, off, phi, time):
             rz(phi).dot(ry(theta).dot(rz(alpha).dot(ry(-theta).dot(rz(-phi)))))
 
     return total_rot_mat
-
-
-# -------------------------------------------------------------------------- #
-# Under work
-# -------------------------------------------------------------------------- #
-
-def simulate2(pulses, offsets=None, tend=None, pc=None):
-    """
-    Calculation of the magnetisations Ix, Iy, and Iz along with the phase across a given 
-    spectral width.
-    
-    Parameters
-    ----------
-    pulses: list of pulses
-        pulses to be applied to magnetization
-    offsets: numpy array of floats
-        list of offsets at which to perform the simulation
-        
-    # TODO: additional parameters
-    nspins:
-        if offsets=None
-    B1: numpy array of floats
-        B1 values to simulation
-    pc: numpy array of floats
-        phase cycling to be used on pulses
-    magn_init: numpy array of floats
-        initial magnetization
-    
-    Returns
-    -------
-    magn: ndarray
-        ndarray containing the magnetisation across the spectral width  
-        
-    WARNING: currently not working
-    """
-    # Phase cycling
-    # TODO: should be input by the user if he wants to use phase cycling
-
-
-    if offsets is None:
-        limit = 0.75*pulses[0].bw
-        offsets = np.linspace(-limit, limit, 100)
-        
-    if tend is None:
-        tend = pulses[-1].end
-        
-    if pc is None:
-        pc = np.zeros((len(pulses)+1, 1))
-    
-    npc = pc.shape[1]
-    noff = len(offsets)
-    
-    magn = np.zeros((3, len(offsets), npc))
-
-    for phase in range(npc):
-        for o in range(noff):
-            
-            # TODO: add option to start with different magentization vector
-            M = np.array([0, 0, 1]) # default: magnetization on z
-            
-            # potential delay before first pulse
-            if pulses[0].start > 0:
-                M = np.dot(Rz(2 * np.pi * offsets[o] * pulses[0].start), M)
-
-            for i, p in enumerate(pulses):
-                
-                for j in range(p.ns):
-                    R_phi = pc[i,phase] + p.ph[j]
-                    
-                    # to use with 3*3 matrix
-                    M = np.dot(Rtot(p.r[j], offsets[o], R_phi, p.tres), M)
-                    
-                    # to use with vector
-                    # M = mvdot(Rtot(p.r[j], offsets[o], R_phi, p.tres), M)
-                    
-                # potential delay between pulses
-                if i < len(pulses) - 1:
-                    
-                    if p.end < pulses[i+1].start: # TODO np.isclose
-                        M = np.dot(Rz(2 * np.pi * offsets[o] * (pulses[i+1].start-p.end)), M)
-
-            # potential delay after last pulse
-            if pulses[-1].end < tend:
-                M = np.dot(Rz(2 * np.pi * offsets[o] * (tend - pulses[-1].end)), M)
-
-            magn[:, o, phase] = np.dot(Rz(-pc[-1,phase]), M)
-            
-    magn = np.sum(magn, axis=2) / npc # phase cycling collapse
-
-    return magn, offsets
-
-
-def B1_phase_variance(pulse, timestep, delta_F, max_rf_amp, nspins, N):
-    """
-    Calculation of the magnetisations Ix, Iy, and Iz along with the phase across a given 
-    spectral width.
-    
-    Parameters
-    ----------
-    Pulse: ndarray
-        numpy array containing the control amplitudes (x_controls, y_controls). (1, 2N) array
-    timestep: float
-        Time of each pulse segment in seconds
-    delta_F: float
-        Spectral width in Hz
-    max_rf_amp: float
-        The power of the RF pulse in Hz
-    nspins: int
-        Number of spins
-    N: int
-        Number of pulse segments
-    
-    Returns
-    -------
-    z: ndarray
-        ndarray containing the Iz magnetisation across the spectral width
-    phi: ndarray
-        ndarray containing the phase across the spectral width
-        
-    # TODO: adapt this function to pulse object
-    """
-
-    amp = np.sqrt((pulse[:N])**2 + (pulse[N:])**2)
-    var = [0.995, 1.005]
-    z = np.linspace(0.5, 1.5, nspins)
-
-    #Phase cycling
-    ph1 = [0]
-    ph31 = [0]
-    npc = len(ph1)
-
-    rf_amps = max_rf_amp * amp
-
-    phi = np.arctan2(pulse[N:], pulse[:N])
-    phi = 180 + ((phi * 180) / np.pi)
-
-    magnetisations = np.zeros((3, nspins, 2, npc))
-    for spin in  range(nspins):
-        for elem in range(2):
-            for phase in range(npc):
-
-                receiver = np.array([0, 0, 0])
-                M = np.array([0,0, 1])
-                for i in range(N):
-
-                    R_phi = np.pi * (ph1[phase] + phi[i]) / 180
-                    M = np.dot(Rtot(rf_amps[i]*var[elem]*z[spin], 0, R_phi, timestep), M)
-
-                receiver = receiver + np.dot(Rz((-np.pi/180) * ph31[phase]), M)
-                magnetisations[:, spin, elem, phase] = receiver
-
-    Ix = magnetisations[0,:,:]
-    Iy = magnetisations[1,:,:]
-    
-    phi = (180/np.pi) * (np.angle(Iy[:,1] + 1j * Ix[:,1]) 
-                         - np.angle(Iy[:,0] + 1j * Ix[:,0]))
-
-    for spin in range(nspins):
-        if phi[spin] < -180:
-            phi[spin] = phi[spin] + 360
-        elif phi[spin] > 180:
-            phi[spin] = phi[spin] - 360
-
-    return z, phi
-
-
-def B1_variability(pulse, timestep, delta_F, max_rf_amp, nspins, N):
-    '''
-    This function plots the variability of the phase gainst B1 of the pulse.
-
-    To prevent confusion of inputs and best results this should be called
-    straight after the optimised pulse has been created, and from within the
-    same script.
-
-    Parameters
-    ----------
-    Pulse: ndarray
-        numpy array containing the control amplitudes (x_controls, y_controls).
-        (1, 2N) array
-    timestep: float
-        Time of each pulse segment in seconds
-    delta_F: float
-        Spectral width in Hz
-    max_rf_amp: float
-        The power of the RF pulse in Hz
-    nspins: int
-        Number of spins
-    N: int
-        Number of pulse segments
-    '''
-    # Plot phase variation with B1
-    plt.figure('B1 phase variation')
-    z, phi = B1_phase_variance(pulse, timestep, delta_F, max_rf_amp, nspins, N)
-
-    plt.plot(z, phi, 'k')
-    plt.xlabel(r'$\frac{B_1}{B_1^0}$')
-    plt.ylabel(r'$\frac{d\phi}{dB_1}$')
-    plt.title('Variation of phase across B1 frequencies')
-
-
-def mvdot(matrix, vector):
-    '''
-    Matrix-vector multiplication rewritten for a column-flattened matrix
-    and a row vector.
-
-    Parameters
-    ----------
-    matrix: ndarray
-        Column-flattened 3x3 matrix
-    vector: ndarray
-        Row vector
-
-    Return
-    ------
-    result: ndarray
-        Product of the multiplication as a row vector.
-    '''
-
-    if matrix.ndim == 1:
-        matrix = matrix.reshape((1, -1))
-
-    if vector.size == 3 and matrix.size == 9:
-        result = np.zeros(3)
-        result[0] = ((matrix[:,0] * vector[0]) + 
-                    (matrix[:,3] * vector[1]) + 
-                    (matrix[:,6] * vector[2]))
-
-        result[1] = ((matrix[:,1] * vector[0]) + 
-                    (matrix[:,4] * vector[1]) + 
-                    (matrix[:,7] * vector[2]))
-
-        result[2] = ((matrix[:,2] * vector[0]) + 
-                    (matrix[:,5] * vector[1]) + 
-                    (matrix[:,8] * vector[2]))
-
-    else:
-        result = np.zeros((np.size(vector, axis=0)))
-        result[:,0] = ((matrix[:,0] * vector[:,0]) + 
-                    (matrix[:,3] * vector[:,1]) + 
-                    (matrix[:,6] * vector[:,2]))
-
-        result[:,1] = ((matrix[:,1] * vector[:,0]) + 
-                    (matrix[:,4] * vector[:,1]) + 
-                    (matrix[:,7] * vector[:,2]))
-
-        result[:,2] = ((matrix[:,2] * vector[:,0]) + 
-                    (matrix[:,5] * vector[:,1]) + 
-                    (matrix[:,8] * vector[:,2]))
-
-    return result
-
-
-def Rz(theta):
-    '''
-    Function to calculate the rotation by an angle theta around the z axis.
-    The rotation matrix is returned as a column flattened vector.
-
-    Parameters
-    ----------
-    theta: float or ndarray
-        The angle(s) of rotation around the z axis
-
-    Return
-    ------
-    Rz: ndarray
-        numpy array of the rotation matrix
-
-    '''
-    cos = np.cos(theta)
-    sin = np.sin(theta)
-
-    rz = [cos, -sin, 0, sin, cos, 0, 0, 0, 1]
-    
-    return np.reshape(np.array([rz]), (3,3))
-
-
-def Rtot(omega, offsets, phi, delta_time):
-        '''
-        Function to calculate the total rotation using the Rodrigues rotation formula. 
-        Rotation around the effective magnetic field by the flip angle beta.
-        Each rotation matrix is returned as a column flattened vector.
-
-        Parameters
-        ----------
-        omega: float 
-            RF amplitude
-        offsets: float
-            Offset frequency of the spin
-        phi: float or ndarray
-            Phase of pulse point
-        delta_time: float
-            Timestep
-
-        Return
-        ------
-        rtot: ndarray
-            numpy array of the rotation matrix
-        '''
-
-        if type(phi) == np.ndarray:
-            omega_eff = np.zeros((len(omega), 2))
-            omega_eff[:,0] = omega.reshape((-1,))
-            omega_eff[:,1] = offsets
-            omega_eff = np.linalg.norm(omega_eff * 2 * np.pi, axis=1) # effective field Beff
-
-            theta = np.arctan2(omega, offsets) #Angle between B1 and Beff
-            beta = delta_time * omega_eff #Flip angle
-            beta = beta.reshape((-1, 1))
-
-            phi_col = phi.reshape((-1,))
-            N = len(phi)
-            Beff = np.zeros((N,3))
-            K = np.zeros((N, 9)) 
-            K2 = np.zeros((N, 9))
-            identity = np.eye(3).reshape((1, -1), order='F')
-            Beff[:,0] = np.sin(theta) * np.cos(phi_col) 
-            Beff[:,1] = np.sin(theta) * np.sin(phi_col)
-            Beff[:,2] = np.cos(theta)
-
-            Beff = Beff / np.linalg.norm(Beff, axis=1).reshape((-1,1))
-
-            Beff2 = Beff ** 2 
-            Beffxy = Beff[:,0] * Beff[:,1]
-            Beffyz = Beff[:,1] * Beff[:,2]
-            Beffzx = Beff[:,2] * Beff[:,0]
-
-            K[:,0] = 0
-            K[:,1] = Beff[:,2]
-            K[:,2] = -Beff[:,1]
-            K[:,3] = -Beff[:,2]
-            K[:,4] = 0
-            K[:,5] = Beff[:,0]
-            K[:,6] = Beff[:,1]
-            K[:,7] = -Beff[:,0]
-            K[:,8] = 0
-            K2[:,0] = -Beff2[:,2] - Beff2[:,1]
-            K2[:,1] = Beffxy
-            K2[:,2] = Beffzx
-            K2[:,3] = Beffxy
-            K2[:,4] = -Beff2[:,2] - Beff2[:,0]
-            K2[:,5] = Beffyz
-            K2[:,6] = Beffzx
-            K2[:,7] = Beffyz
-            K2[:,8] = -Beff2[:,1] - Beff2[:,0]
-
-            rtot = identity + (np.sin(beta) * K) + ((1 - np.cos(beta)) * K2)
-        
-        else:
-
-            omega_eff = np.sqrt((2 * np.pi * omega)**2       # Angular frequency of the
-                        + (2 * np.pi * offsets)**2)  # effective field Beff
-            theta = np.arctan2(omega, offsets) #Angle between B1 and Beff
-            beta = delta_time * omega_eff #Flip angle
-            
-            Beff = np.zeros(3)
-            K = np.zeros(9)
-            K2 = np.zeros(9)
-            identity = np.eye(3).reshape((1, -1), order='F')
-            Beff[0] = np.sin(theta) * np.cos(phi) 
-            Beff[1] = np.sin(theta) * np.sin(phi)
-            Beff[2] = np.cos(theta)
-
-            Beff = Beff / np.linalg.norm(Beff)
-
-            Beff2 = Beff ** 2 
-            Beffxy = Beff[0] * Beff[1]
-            Beffyz = Beff[1] * Beff[2]
-            Beffzx = Beff[2] * Beff[0]
-
-            K[0] = 0
-            K[1] = Beff[2]
-            K[2] = -Beff[1]
-            K[3] = -Beff[2]
-            K[4] = 0
-            K[5] = Beff[0]
-            K[6] = Beff[1]
-            K[7] = -Beff[0]
-            K[8] = 0
-            K2[0] = -Beff2[2] - Beff2[1]
-            K2[1] = Beffxy
-            K2[2] = Beffzx
-            K2[3] = Beffxy
-            K2[4] = -Beff2[2] - Beff2[0]
-            K2[5] = Beffyz
-            K2[6] = Beffzx
-            K2[7] = Beffyz
-            K2[8] = -Beff2[1] - Beff2[0]
-
-            rtot = identity + (np.sin(beta) * K) + ((1 - np.cos(beta)) * K2)
-
-        return np.transpose(np.reshape(rtot, (3,3)))
