@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-# Grab the version number without importing penguins.
+# read the version number in as __version__
 exec(open('mrpypulse/_version.py').read())
 
 setup(
@@ -21,11 +21,12 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "License :: OSI Approved :: MIT License"
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.7',
     install_requires=[
         "numpy>=1.17.0",
+        "matplotlib>=3.3"
     ]
-
 )

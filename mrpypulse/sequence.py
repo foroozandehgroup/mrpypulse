@@ -2,10 +2,12 @@
 
 import os
 import copy
+
 import numpy as np
+import matplotlib.pyplot as plt
+
 from . import pulse
 from .magnetization import simulate, magn_phase, plot_magn
-import matplotlib.pyplot as plt
 
 
 def pc_rec(phase_cycles, ctp):

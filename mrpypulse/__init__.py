@@ -1,3 +1,3 @@
-from .pulse import *
-from .magnetization import *
-from .sequence import *
+from mrpypulse.pulse import *
+from mrpypulse.magnetization import *
+from mrpypulse.sequence import *
