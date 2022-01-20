@@ -10,6 +10,13 @@ def test_style_mrpypulse():
     assert res.total_errors == 0
 
 
+def test_style_examples():
+    s = pycodestyle.StyleGuide()
+    p = (Path(__file__).parents[1].resolve()) / "examples"
+    res = s.check_files([f for f in p.iterdir() if f.suffix == ".py"])
+    assert res.total_errors == 0
+
+
 def test_style_tests():
     s = pycodestyle.StyleGuide()
     p = Path(__file__).parent
