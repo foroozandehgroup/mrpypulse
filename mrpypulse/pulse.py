@@ -642,7 +642,7 @@ class Pulse:
         except ImportError:
             print('matlab.engine could not be imported.')
 
-        t = self.t * 1e6
+        t = (self.t - self.start) * 1e6
         y_t = self.x + self.y * 1j
         nres = f.size*8
 
