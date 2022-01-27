@@ -10,8 +10,8 @@ exec(open('mrpypulse/_version.py').read())
 setup(
     name="mrpypulse",
     version=__version__,
-    author="Jean-Baptiste Verstraete, Ali Sherzad, Mohammadali Foroozandeh",
-    author_email="mohammadali.foroozandeh@chem.ox.ac.uk",
+    author="Jean-Baptiste Verstraete",
+    author_email="jb.verstraete@gmx.com",
     description=("Mr. PyPulse for Magnetic Resonance pulses"),
     long_description=long_description,
     long_description_content_type="text/markdown",
