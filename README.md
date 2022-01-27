@@ -10,12 +10,8 @@ Mr. Py Pulse for generation and manipulation of Magnetic Resonance pulses in Pyt
 
 ### installation
 
-Not on PyPI yet, so you have to do this manually
-
 ```
-git clone https://github.com/foroozandehgroup/mrpypulse
-cd mrpypulse
-pip install -e .
+pip install mrpypulse
 ```
 
 ### tests
