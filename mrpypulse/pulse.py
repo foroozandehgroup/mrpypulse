@@ -530,8 +530,8 @@ class Pulse:
         ph_TopSpin: numpy array of floats
             Pulse phase normalized from 0° to 360°
         """
-        r_TopSpin = self.r/self.w1
-        ph_TopSpin = np.rad2deg(self.ph)
+        r_TopSpin = 100 * self.r/self.w1
+        ph_TopSpin = np.rad2deg(self.ph) % 360
 
         return r_TopSpin, ph_TopSpin
 
