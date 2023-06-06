@@ -29,7 +29,7 @@ setup(
     python_requires='>=3.6s',
     install_requires=[
         "numpy>=1.17.0",
-        "scipy>=1.5.0"
+        "scipy>=1.5.0",
         "matplotlib>=3.3"
     ]
 )
