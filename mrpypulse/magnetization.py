@@ -146,7 +146,7 @@ def rx(phi):
     If phi is an array containing n angles, return an array of n
     rotational matrixes for these angles around the x-axis.
     """
-    if type(phi) == np.ndarray:
+    if isinstance(phi, np.ndarray):
 
         m11 = np.full(len(phi), 1)
         m12 = np.full(len(phi), 0)
@@ -170,7 +170,7 @@ def rx(phi):
 def ry(phi):
     """Returns the rotational matrix for an angle phi around the y-axis
     """
-    if type(phi) == np.ndarray:
+    if isinstance(phi, np.ndarray):
         m11 = np.cos(phi)
         m12 = np.full(len(phi), 0)
         m13 = np.sin(phi)
@@ -192,7 +192,8 @@ def ry(phi):
 def rz(phi):
     """Returns the rotational matrix for an angle phi around the z-axis
     """
-    if type(phi) == np.ndarray:
+    if isinstance(phi, np.ndarray):
+
         m11 = np.cos(phi)
         m12 = np.sin(phi)
         m13 = np.full(len(phi), 0)
@@ -234,7 +235,7 @@ def rtot(omega, off, phi, time):
     theta = np.arctan2(omega, off)  # angle between Beff and B1
     alpha = time * omega_eff  # flip angle
 
-    if type(phi) == np.ndarray:
+    if isinstance(phi, np.ndarray):
 
         # array with each pulse point rotational matrix
         total_rot_mat = np.einsum('ijh,jkh,klh,lmh,mnh->inh',
