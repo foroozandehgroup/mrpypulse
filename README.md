@@ -21,3 +21,6 @@ Require pytest, inside the top-level `mrpypulse` directory, run:
 ```
 pytest tests\
 ```
+### more information
+
+See appendix A.2 of [this document](https://ora.ox.ac.uk/objects/uuid:7678f91b-eb3d-45db-8eb0-55095c6819b4)
