@@ -12,11 +12,14 @@ def simulate(pulses, off=None, tend=None, pc=None):
     ----------
     pulses: list of pulses
         pulses to be applied to magnetization
-    off: numpy array of floats
+    off: numpy array of floats, default None
         list of offsets at which to perform the simulation, initialized to
         np.linspace(-0.75*pulses[0].bw, 0.75*pulses[0].bw, 100) if not provided
         (and possible to initialize)
-    pc: numpy array of floats
+    tend: float, default None
+        time at which to end the simulation (should be superior to end of last
+        pulse in pulses), can be used to add extra delay after pulses
+    pc: numpy array of floats, default None
         phase cycling to be used on pulses
 
     Returns
