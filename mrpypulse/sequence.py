@@ -182,13 +182,13 @@ class Sequence:
         # potential initial delay
         if not np.isclose(0, self.pulses[0].start, rtol=1e-6, atol=1e-15):
             delay = pulse.NoPulse(tp=self.pulses[0].start,
-                                  tres=self.tres, start=0)
+                                  tres=p.tres, start=0)
             p += delay
 
         # potential final delay
         if not np.isclose(p.tp, self.total_time, rtol=1e-6, atol=1e-15):
             delay = pulse.NoPulse(tp=self.total_time - p.tp,
-                                  tres=self.tres, start=p.tp)
+                                  tres=p.tres, start=p.tp)
             p += delay
 
         p.plot()
